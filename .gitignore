@@ -1,45 +1,72 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# ==============================================================================
+# OS Files
+# ==============================================================================
 .DS_Store
+Thumbs.db
 .atom/
 .build/
 .buildlog/
 .history
 .svn/
 .swiftpm/
-migrate_working_dir/
 
-# IntelliJ related
+# ==============================================================================
+# IDE / Editor Files
+# ==============================================================================
+# IntelliJ / Android Studio
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code
+.vscode/
 
-# Flutter/Dart/Pub related
+# Miscellaneous
+*.class
+*.pyc
+*.swp
+migrate_working_dir/
+
+# ==============================================================================
+# Logs & Environment Variables
+# ==============================================================================
+*.log
+.env
+.env.*
+
+# ==============================================================================
+# Flutter / Dart / Pub
+# ==============================================================================
 **/doc/api/
-**/ios/Flutter/.last_build_id
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
-/build/
-/coverage/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
+# ==============================================================================
+# Android
+# ==============================================================================
 /android/app/debug
 /android/app/profile
 /android/app/release
+.gradle/
+local.properties
+
+# ==============================================================================
+# iOS / macOS
+# ==============================================================================
+**/ios/Flutter/.last_build_id
+Pods/
+DerivedData/
+
+# ==============================================================================
+# Build Artifacts & Obfuscation
+# ==============================================================================
+/build/
+dist/
+/coverage/
+app.*.symbols
+app.*.map.json
