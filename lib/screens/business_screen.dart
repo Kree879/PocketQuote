@@ -1,0 +1,214 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../state/quote_state.dart';
+import '../theme/app_theme.dart';
+import '../widgets/glass_container.dart';
+
+class BusinessScreen extends StatefulWidget {
+  const BusinessScreen({super.key});
+
+  @override
+  State<BusinessScreen> createState() => _BusinessScreenState();
+}
+
+class _BusinessScreenState extends State<BusinessScreen> {
+  final _companyNameController = TextEditingController();
+  final _companyAddressController = TextEditingController();
+  final _companyPhoneController = TextEditingController();
+  final _companyEmailController = TextEditingController();
+  final _hourlyRateController = TextEditingController();
+  final _travelRateController = TextEditingController();
+  final _markupController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final state = context.read<QuoteState>();
+    _companyNameController.text = state.companyName;
+    _companyAddressController.text = state.companyAddress;
+    _companyPhoneController.text = state.companyPhone;
+    _companyEmailController.text = state.companyEmail;
+    _hourlyRateController.text = state.defaultGlobalHourlyRate.toStringAsFixed(2);
+    _travelRateController.text = state.defaultGlobalTravelRate.toStringAsFixed(2);
+    _markupController.text = state.defaultGlobalMarkup.toStringAsFixed(2);
+  }
+
+  @override
+  void dispose() {
+    _companyNameController.dispose();
+    _companyAddressController.dispose();
+    _companyPhoneController.dispose();
+    _companyEmailController.dispose();
+    _hourlyRateController.dispose();
+    _travelRateController.dispose();
+    _markupController.dispose();
+    super.dispose();
+  }
+
+  void _saveSettings() {
+    final company = _companyNameController.text.trim();
+    final address = _companyAddressController.text.trim();
+    final phone = _companyPhoneController.text.trim();
+    final email = _companyEmailController.text.trim();
+    final rate = double.tryParse(_hourlyRateController.text) ?? 350.0;
+    final travel = double.tryParse(_travelRateController.text) ?? 8.5;
+    final markup = double.tryParse(_markupController.text) ?? 15.0;
+
+    context.read<QuoteState>().updateGlobalSettings(
+      companyName: company,
+      companyAddress: address,
+      companyPhone: phone,
+      companyEmail: email,
+      hourlyRate: rate,
+      travelRate: travel,
+      markup: markup,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Business Defaults Saved')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Business'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16.0),
+        children: [
+          Text(
+            'Business Defaults',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.accentColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'These values will be used as the starting point for all new quotes.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 24),
+          
+          GlassContainer(
+            child: Column(
+              children: [
+                _buildSettingField(
+                  label: 'Company / Business Name',
+                  controller: _companyNameController,
+                  hint: 'e.g. Pocket Quote',
+                  keyboardType: TextInputType.text,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Company Address',
+                  controller: _companyAddressController,
+                  hint: 'e.g. 123 Street, City',
+                  keyboardType: TextInputType.multiline,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Contact Number',
+                  controller: _companyPhoneController,
+                  hint: 'e.g. +27 12 345 6789',
+                  keyboardType: TextInputType.phone,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Email Address',
+                  controller: _companyEmailController,
+                  hint: 'e.g. hello@company.com',
+                  keyboardType: TextInputType.emailAddress,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Default Hourly Labor Rate',
+                  controller: _hourlyRateController,
+                  prefix: 'R',
+                  hint: 'e.g. 450.00',
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Default Travel Rate (per km)',
+                  controller: _travelRateController,
+                  prefix: 'R',
+                  hint: 'e.g. 8.50',
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Default Material Markup %',
+                  controller: _markupController,
+                  suffix: '%',
+                  hint: 'e.g. 20.0',
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          
+          ElevatedButton(
+            onPressed: _saveSettings,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: AppTheme.accentColor,
+            ),
+            child: const Text('Save Business Defaults'),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingField({
+    required String label,
+    required TextEditingController controller,
+    String? prefix,
+    String? suffix,
+    String? hint,
+    TextInputType keyboardType = const TextInputType.numberWithOptions(decimal: true),
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label, 
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: keyboardType == TextInputType.multiline ? null : 1,
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+          decoration: InputDecoration(
+            prefixText: prefix,
+            suffixText: suffix,
+            hintText: hint,
+            hintStyle: TextStyle(color: isDark ? Colors.white24 : Colors.black26),
+            filled: true,
+            fillColor: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

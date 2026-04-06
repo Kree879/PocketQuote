@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "597608208696",
+    "project_id": "pocket-quote",
+    "storage_bucket": "pocket-quote.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:597608208696:android:4429631be6ae2829ca09cd",
+        "android_client_info": {
+          "package_name": "com.kree8designs.pocketquote"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "597608208696-ukf93cnvit7rd4s6udfsq28vffc8sidl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kree8designs.pocketquote",
+            "certificate_hash": "0b903f1c187f76615092c30ffcbcc9111daf5539"
+          }
+        },
+        {
+          "client_id": "597608208696-3dad01ns1r4l6k1c0b86n43kplhn35l3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsyiOHH35oE8us2rTgblbc4p5uKFshUsQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "597608208696-3dad01ns1r4l6k1c0b86n43kplhn35l3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "597608208696-nvvsprgbaobp2ck36j77q20j9s8dds38.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.bakkiebrigade.quickQuote"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
