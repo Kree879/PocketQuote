@@ -15,7 +15,7 @@ void main() {
     // Build our app and trigger a frame.
     // We need to initialize Hive for tests or use a dummy provider
     // For now, we'll just check if the app starts
-    await tester.pumpWidget(const PocketQuoteApp());
+    await tester.pumpWidget(const QuickQuoteApp());
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

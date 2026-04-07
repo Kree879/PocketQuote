@@ -53,33 +53,33 @@ class PdfService {
         overrideMarkup: (profile['markupPercentage'] ?? 15).toDouble(),
       );
 
-      // 3. Prepare filename: Kree8_Quote_[ClientName]_[Date].pdf
+      // 3. Prepare filename: PocketQuote_Quote_[ClientName]_[Date].pdf
       final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final prefix = isInvoice ? "Kree8_Invoice" : "Kree8_Quote";
-      final clientSafe = (quote.clientName.isEmpty ? "Client" : quote.clientName).replaceAll(' ', '_');
+      final prefix = isInvoice ? "PocketQuote_Invoice" : "PocketQuote_Quote";
+      final clientSafe = (quote.clientName.isEmpty ? "Client" : quote.clientName)
+          .trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '-').replaceAll(' ', '_');
       final fileName = "${prefix}_${clientSafe}_$dateStr.pdf";
  
       // 4. Save to temporary local storage for a split second
       final tempFile = await _saveToTempFile(bytes, fileName);
       final fileBytes = await tempFile.readAsBytes();
  
-      // 5. Upload to Drive using the verified folder ID
+      // 5. Upload to Drive natively without hardcoded folderId
       final fileId = await driveService.uploadFile(
         data: fileBytes,
         fileName: fileName,
         mimeType: 'application/pdf',
-        folderId: '1eufszFfuDyDAsRiU8ECv3vxRZFwbynKK',
       );
  
       if (context.mounted) {
  
         if (fileId != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Kree8 PDF successfully backed up!'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Pocket Quote PDF successfully uploaded to Drive!'), backgroundColor: Colors.green),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to upload Kree8 PDF to Drive.'), backgroundColor: Colors.redAccent),
+            const SnackBar(content: Text('Failed to upload Pocket Quote PDF to Drive.'), backgroundColor: Colors.redAccent),
           );
         }
       }
@@ -107,8 +107,9 @@ class PdfService {
     
     final projectName = quote.projectTitle.isNotEmpty ? quote.projectTitle : "Project";
     final prefix = isInvoice ? "Invoice" : "Quote";
-    final fileName = "${prefix}_${projectName.replaceAll(' ', '_')}.pdf";
-    final subject = "${globalState.companyName.isNotEmpty ? globalState.companyName : 'Kree8'} - $projectName";
+    final safeProjectName = projectName.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '-').replaceAll(' ', '_');
+    final fileName = "${prefix}_$safeProjectName.pdf";
+    final subject = "${globalState.companyName.isNotEmpty ? globalState.companyName : 'Pocket Quote'} - $projectName";
     
     final double baseMaterialsCost = quote.materials.fold(0.0, (sum, item) => sum + item.totalCost);
     final double materialsMarkupCost = baseMaterialsCost * (quote.markupPercentage / 100);
@@ -121,13 +122,23 @@ class PdfService {
                  "Please find the attached ${isInvoice ? 'invoice' : 'quote'} for $projectName.\n"
                  "Total Amount: R${computedTotal.toStringAsFixed(2)}\n\n"
                  "Best regards,\n"
-                 "${globalState.companyName.isNotEmpty ? globalState.companyName : 'Kree8 Contractor'}";
+                 "${globalState.companyName.isNotEmpty ? globalState.companyName : 'Pocket Quote Contractor'}";
 
     await Share.shareXFiles(
       [XFile.fromData(bytes, name: fileName, mimeType: 'application/pdf')],
       subject: subject,
       text: text,
     );
+    
+    // Auto-backup to Drive without blocking UI flow
+    saveQuotePdfToDrive(
+      context: context, 
+      quote: quote, 
+      globalState: globalState, 
+      isInvoice: isInvoice
+    ).catchError((e) {
+      debugPrint("Auto-backup failed: $e");
+    });
   }
 
 
@@ -177,7 +188,7 @@ class PdfService {
                   children: [
                     pw.Text('Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}', style: const pw.TextStyle(fontSize: 10)),
                     pw.Text('Quote ID: ${quote.id.substring(0, 8).toUpperCase()}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
-                    pw.Text(globalState.companyName.isNotEmpty ? globalState.companyName.toUpperCase() : 'KREE8', 
+                    pw.Text(globalState.companyName.isNotEmpty ? globalState.companyName.toUpperCase() : 'POCKET QUOTE', 
                         style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
                     if (globalState.companyAddress.isNotEmpty)
                       pw.Text(globalState.companyAddress, style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700), textAlign: pw.TextAlign.right),

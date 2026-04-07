@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'google_drive_auth_service.dart';
+import '../models/quote_model.dart';
 
 class ExportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -50,13 +51,24 @@ class ExportService {
         .get();
 
     final List<List<dynamic>> rows = [
-      ['Client', 'Total (R)', 'Date']
+      [
+        'Client', 
+        'Project', 
+        'Materials Base (R)', 
+        'Materials Markup (%)', 
+        'Labor Cost (R)', 
+        'Travel Cost (R)', 
+        'Call-Out Fee (R)', 
+        'Total (R)', 
+        'Date'
+      ]
     ];
 
     final dateFmt = DateFormat('yyyy-MM-dd');
 
     for (final doc in quotesSnap.docs) {
       final d = doc.data();
+      final quote = QuoteModel.fromJson(d);
       
       String dateStr = '';
       final rawDate = d['lastModified'];
@@ -70,9 +82,20 @@ class ExportService {
         }
       }
 
+      final double baseMaterialsCost = quote.materials.fold(0.0, (sum, item) => sum + item.totalCost);
+      final double laborCost = quote.hourlyRate * quote.estimatedHours;
+      final double travelCost = quote.useFlatTravelFee ? quote.flatTravelFee : (quote.travelCostPerKm * quote.travelDistanceKm);
+      final double callOutCost = quote.useCallOutFee ? quote.callOutFeeAmount : 0.0;
+
       rows.add([
-        d['clientName'] ?? '',
-        (d['totalCostCached'] ?? 0).toDouble(),
+        quote.clientName,
+        quote.projectTitle,
+        baseMaterialsCost.toDouble(),
+        quote.markupPercentage.toDouble(),
+        laborCost.toDouble(),
+        travelCost.toDouble(),
+        callOutCost.toDouble(),
+        quote.totalCostCached.toDouble(),
         dateStr,
       ]);
     }
@@ -102,7 +125,7 @@ class ExportService {
       
       // 1. Export Catalog
       final catalogBytes = await generateCatalogCsvBytes(userId);
-      final catalogFileName = 'Kree8_Catalog_$dateStr.csv';
+      final catalogFileName = 'PocketQuote_Catalog_$dateStr.csv';
       
       // Save locally for a split second
       final catalogFile = await _saveToTempFile(catalogBytes, catalogFileName);
@@ -112,12 +135,11 @@ class ExportService {
         data: catalogFileBytes,
         fileName: catalogFileName,
         mimeType: 'text/csv',
-        folderId: '1eufszFfuDyDAsRiU8ECv3vxRZFwbynKK',
       );
 
       // 2. Export History
       final historyBytes = await generateHistoryCsvBytes(userId);
-      final historyFileName = 'Kree8_Quote_History_$dateStr.csv';
+      final historyFileName = 'PocketQuote_Quote_History_$dateStr.csv';
       
       // Save locally
       final historyFile = await _saveToTempFile(historyBytes, historyFileName);
@@ -127,19 +149,18 @@ class ExportService {
         data: historyFileBytes,
         fileName: historyFileName,
         mimeType: 'text/csv',
-        folderId: '1eufszFfuDyDAsRiU8ECv3vxRZFwbynKK',
       );
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kree8 Data (Catalog & History) backed up to Drive!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('Pocket Quote Data (Catalog & History) uploaded to Drive!'), backgroundColor: Colors.green),
         );
       }
 
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kree8 Export error: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(content: Text('Pocket Quote Export error: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }

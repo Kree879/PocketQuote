@@ -35,6 +35,9 @@ class AuthService {
         password: password,
       );
       return result.user;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Sign up error [${e.code}]: ${e.message}');
+      rethrow;
     } catch (e) {
       debugPrint('Sign up error: $e');
       rethrow;
@@ -49,8 +52,24 @@ class AuthService {
         password: password,
       );
       return result.user;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Sign in error [${e.code}]: ${e.message}');
+      rethrow;
     } catch (e) {
       debugPrint('Sign in error: $e');
+      rethrow;
+    }
+  }
+
+  // Send password reset email
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Password reset error [${e.code}]: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('Password reset error: $e');
       rethrow;
     }
   }
