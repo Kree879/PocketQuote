@@ -101,6 +101,13 @@ class QuoteState extends ChangeNotifier {
   double defaultGlobalTravelRate = 8.5;
   double defaultGlobalMarkup = 15.0;
 
+  // Banking Details
+  String bankName = '';
+  String accountType = '';
+  String accountNumber = '';
+  String branchCode = '';
+  String swiftCode = '';
+
   // App Theme Mode
   bool isDarkMode = true;
 
@@ -177,6 +184,11 @@ class QuoteState extends ChangeNotifier {
         if (settings.containsKey('hourlyRate')) defaultGlobalHourlyRate = settings['hourlyRate'];
         if (settings.containsKey('travelRate')) defaultGlobalTravelRate = settings['travelRate'];
         if (settings.containsKey('markupPercentage')) defaultGlobalMarkup = settings['markupPercentage'];
+        if (settings.containsKey('bankName')) bankName = settings['bankName'];
+        if (settings.containsKey('accountType')) accountType = settings['accountType'];
+        if (settings.containsKey('accountNumber')) accountNumber = settings['accountNumber'];
+        if (settings.containsKey('branchCode')) branchCode = settings['branchCode'];
+        if (settings.containsKey('swiftCode')) swiftCode = settings['swiftCode'];
         
         // Persist locally
         _settingsBox.put('companyName', companyName);
@@ -186,6 +198,11 @@ class QuoteState extends ChangeNotifier {
         _settingsBox.put('hourlyRate', defaultGlobalHourlyRate);
         _settingsBox.put('travelRate', defaultGlobalTravelRate);
         _settingsBox.put('markupPercentage', defaultGlobalMarkup);
+        _settingsBox.put('bankName', bankName);
+        _settingsBox.put('accountType', accountType);
+        _settingsBox.put('accountNumber', accountNumber);
+        _settingsBox.put('branchCode', branchCode);
+        _settingsBox.put('swiftCode', swiftCode);
         notifyListeners();
       }
     });
@@ -208,6 +225,11 @@ class QuoteState extends ChangeNotifier {
     defaultGlobalHourlyRate = _settingsBox.get('hourlyRate', defaultValue: 350.0);
     defaultGlobalTravelRate = _settingsBox.get('travelRate', defaultValue: 8.5);
     defaultGlobalMarkup = _settingsBox.get('markupPercentage', defaultValue: 15.0);
+    bankName = _settingsBox.get('bankName', defaultValue: '');
+    accountType = _settingsBox.get('accountType', defaultValue: '');
+    accountNumber = _settingsBox.get('accountNumber', defaultValue: '');
+    branchCode = _settingsBox.get('branchCode', defaultValue: '');
+    swiftCode = _settingsBox.get('swiftCode', defaultValue: '');
     isDarkMode = _settingsBox.get('isDarkMode', defaultValue: true);
     final syncMs = _settingsBox.get('lastSyncedAt');
     if (syncMs != null) lastSyncedAt = DateTime.fromMillisecondsSinceEpoch(syncMs);
@@ -479,6 +501,11 @@ class QuoteState extends ChangeNotifier {
     required double hourlyRate,
     required double travelRate,
     required double markup,
+    required String bankName,
+    required String accountType,
+    required String accountNumber,
+    required String branchCode,
+    required String swiftCode,
   }) {
     this.companyName = companyName;
     this.companyAddress = companyAddress;
@@ -487,6 +514,11 @@ class QuoteState extends ChangeNotifier {
     defaultGlobalHourlyRate = hourlyRate;
     defaultGlobalTravelRate = travelRate;
     defaultGlobalMarkup = markup;
+    this.bankName = bankName;
+    this.accountType = accountType;
+    this.accountNumber = accountNumber;
+    this.branchCode = branchCode;
+    this.swiftCode = swiftCode;
     
     _settingsBox.put('companyName', companyName);
     _settingsBox.put('companyAddress', companyAddress);
@@ -495,6 +527,11 @@ class QuoteState extends ChangeNotifier {
     _settingsBox.put('hourlyRate', hourlyRate);
     _settingsBox.put('travelRate', travelRate);
     _settingsBox.put('markupPercentage', markup);
+    _settingsBox.put('bankName', bankName);
+    _settingsBox.put('accountType', accountType);
+    _settingsBox.put('accountNumber', accountNumber);
+    _settingsBox.put('branchCode', branchCode);
+    _settingsBox.put('swiftCode', swiftCode);
     notifyListeners();
 
     if (currentUser != null) {
@@ -506,6 +543,11 @@ class QuoteState extends ChangeNotifier {
         'hourlyRate': hourlyRate,
         'travelRate': travelRate,
         'markupPercentage': markup,
+        'bankName': bankName,
+        'accountType': accountType,
+        'accountNumber': accountNumber,
+        'branchCode': branchCode,
+        'swiftCode': swiftCode,
       });
     }
   }
@@ -658,6 +700,11 @@ class QuoteState extends ChangeNotifier {
       'hourlyRate': defaultGlobalHourlyRate,
       'travelRate': defaultGlobalTravelRate,
       'markupPercentage': defaultGlobalMarkup,
+      'bankName': bankName,
+      'accountType': accountType,
+      'accountNumber': accountNumber,
+      'branchCode': branchCode,
+      'swiftCode': swiftCode,
     });
 
     return result;
@@ -681,6 +728,11 @@ class QuoteState extends ChangeNotifier {
         'hourlyRate': defaultGlobalHourlyRate,
         'travelRate': defaultGlobalTravelRate,
         'markupPercentage': defaultGlobalMarkup,
+        'bankName': bankName,
+        'accountType': accountType,
+        'accountNumber': accountNumber,
+        'branchCode': branchCode,
+        'swiftCode': swiftCode,
       };
 
       await _firestoreService.syncAllData(

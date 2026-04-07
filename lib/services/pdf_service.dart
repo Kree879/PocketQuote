@@ -171,6 +171,23 @@ class PdfService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
+        footer: (pw.Context context) {
+          if (isInvoice && globalState.bankName.isNotEmpty) {
+            final swiftSuffix = globalState.swiftCode.isNotEmpty ? ' Swift Code: ${globalState.swiftCode}' : '';
+            final bankText = '${globalState.bankName} ${globalState.accountType} Acc. ${globalState.accountNumber} Branch Code: ${globalState.branchCode}$swiftSuffix';
+            return pw.Container(
+              alignment: pw.Alignment.center,
+              margin: const pw.EdgeInsets.only(top: 10.0),
+              child: pw.Text(
+                bankText,
+                style: const pw.TextStyle(color: PdfColors.grey700, fontSize: 9),
+              ),
+            );
+          }
+          // The page package automatically provides page numbering if desired, 
+          // but we return nothing if there's no bank details/not an invoice.
+          return pw.SizedBox(); 
+        },
         build: (pw.Context context) {
           return [
             pw.Row(

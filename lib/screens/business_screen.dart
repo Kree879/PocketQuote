@@ -19,6 +19,12 @@ class _BusinessScreenState extends State<BusinessScreen> {
   final _hourlyRateController = TextEditingController();
   final _travelRateController = TextEditingController();
   final _markupController = TextEditingController();
+  
+  final _bankNameController = TextEditingController();
+  final _accountNumberController = TextEditingController();
+  final _branchCodeController = TextEditingController();
+  final _swiftCodeController = TextEditingController();
+  String _accountType = 'Cheque / Current';
 
   @override
   void initState() {
@@ -31,6 +37,12 @@ class _BusinessScreenState extends State<BusinessScreen> {
     _hourlyRateController.text = state.defaultGlobalHourlyRate.toStringAsFixed(2);
     _travelRateController.text = state.defaultGlobalTravelRate.toStringAsFixed(2);
     _markupController.text = state.defaultGlobalMarkup.toStringAsFixed(2);
+    
+    _bankNameController.text = state.bankName;
+    _accountNumberController.text = state.accountNumber;
+    _branchCodeController.text = state.branchCode;
+    _swiftCodeController.text = state.swiftCode;
+    _accountType = state.accountType.isEmpty ? 'Cheque / Current' : state.accountType;
   }
 
   @override
@@ -42,6 +54,11 @@ class _BusinessScreenState extends State<BusinessScreen> {
     _hourlyRateController.dispose();
     _travelRateController.dispose();
     _markupController.dispose();
+    
+    _bankNameController.dispose();
+    _accountNumberController.dispose();
+    _branchCodeController.dispose();
+    _swiftCodeController.dispose();
     super.dispose();
   }
 
@@ -62,6 +79,11 @@ class _BusinessScreenState extends State<BusinessScreen> {
       hourlyRate: rate,
       travelRate: travel,
       markup: markup,
+      bankName: _bankNameController.text.trim(),
+      accountType: _accountType,
+      accountNumber: _accountNumberController.text.trim(),
+      branchCode: _branchCodeController.text.trim(),
+      swiftCode: _swiftCodeController.text.trim(),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -150,6 +172,64 @@ class _BusinessScreenState extends State<BusinessScreen> {
           ),
           const SizedBox(height: 32),
           
+          Text(
+            'Banking & Payments',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.accentColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'These details will automatically be appended to the bottom of all your finalized Invoices.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 24),
+          
+          GlassContainer(
+            child: Column(
+              children: [
+                _buildSettingField(
+                  label: 'Bank Name',
+                  controller: _bankNameController,
+                  hint: 'e.g. Discovery Bank',
+                  keyboardType: TextInputType.text,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildDropdownField(
+                  label: 'Account Type',
+                  value: _accountType,
+                  items: const ['Cheque / Current', 'Savings', 'Transmission'],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _accountType = val);
+                  },
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Account Number',
+                  controller: _accountNumberController,
+                  hint: 'e.g. 1234567890',
+                  keyboardType: TextInputType.number,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Branch Code',
+                  controller: _branchCodeController,
+                  hint: 'e.g. 250655',
+                  keyboardType: TextInputType.number,
+                ),
+                Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(25)),
+                _buildSettingField(
+                  label: 'Swift Code (Optional)',
+                  controller: _swiftCodeController,
+                  hint: 'e.g. ABSAZAJJ',
+                  keyboardType: TextInputType.text,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          
           ElevatedButton(
             onPressed: _saveSettings,
             style: ElevatedButton.styleFrom(
@@ -207,6 +287,54 @@ class _BusinessScreenState extends State<BusinessScreen> {
               borderSide: BorderSide(color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15)),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required String value,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label, 
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white70 : Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: value,
+          dropdownColor: isDark ? const Color(0xFF242730) : Colors.white,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15)),
+            ),
+          ),
+          style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16),
+          items: items.map((type) {
+            return DropdownMenuItem(
+              value: type,
+              child: Text(type),
+            );
+          }).toList(),
+          onChanged: onChanged,
         ),
       ],
     );
