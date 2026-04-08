@@ -124,12 +124,16 @@ class PdfService {
                  "Best regards,\n"
                  "${globalState.companyName.isNotEmpty ? globalState.companyName : 'Pocket Quote Contractor'}";
 
-    await Share.shareXFiles(
-      [XFile.fromData(bytes, name: fileName, mimeType: 'application/pdf')],
-      subject: subject,
-      text: text,
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile.fromData(bytes, name: fileName, mimeType: 'application/pdf')],
+        subject: subject,
+        text: text,
+      ),
     );
-    
+
+    if (!context.mounted) return;
+
     // Auto-backup to Drive without blocking UI flow
     saveQuotePdfToDrive(
       context: context, 

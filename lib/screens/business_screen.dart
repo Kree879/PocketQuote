@@ -93,7 +93,6 @@ class _BusinessScreenState extends State<BusinessScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
       appBar: AppBar(
@@ -312,7 +311,7 @@ class _BusinessScreenState extends State<BusinessScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           dropdownColor: isDark ? const Color(0xFF242730) : Colors.white,
           decoration: InputDecoration(
             filled: true,

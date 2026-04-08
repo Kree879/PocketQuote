@@ -82,7 +82,7 @@ class ExportService {
         }
       }
 
-      final double baseMaterialsCost = quote.materials.fold(0.0, (sum, item) => sum + item.totalCost);
+      final double baseMaterialsCost = quote.materials.fold(0.0, (acc, item) => acc + item.totalCost);
       final double laborCost = quote.hourlyRate * quote.estimatedHours;
       final double travelCost = quote.useFlatTravelFee ? quote.flatTravelFee : (quote.travelCostPerKm * quote.travelDistanceKm);
       final double callOutCost = quote.useCallOutFee ? quote.callOutFeeAmount : 0.0;

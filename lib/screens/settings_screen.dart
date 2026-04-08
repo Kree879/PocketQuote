@@ -14,7 +14,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final bool _isSyncing = false;
   bool _isExporting = false;
   bool _isConnectingDrive = false;
   bool _isVerifyingDrive = false;

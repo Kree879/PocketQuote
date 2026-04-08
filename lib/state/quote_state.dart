@@ -97,7 +97,6 @@ class QuoteState extends ChangeNotifier {
   String companyPhone = '';
   String companyEmail = '';
   double defaultGlobalHourlyRate = 350.0;
-  final double _defaultGlobalTravelRateKey = 8.5; // used for initialization
   double defaultGlobalTravelRate = 8.5;
   double defaultGlobalMarkup = 15.0;
 

@@ -29,7 +29,6 @@ class GoogleDriveAuthService {
   static const String backupFolderName = 'Pocket Quote Backups';
   
   // Client IDs provided by user
-  static const String _clientId = '597608208696-3dad01ns1r4l6k1c0b86n43kplhn35l3.apps.googleusercontent.com';
   static const String _serverClientId = '597608208696-3dad01ns1r4l6k1c0b86n43kplhn35l3.apps.googleusercontent.com';
 
   GoogleSignInAccount? _currentUser;
@@ -76,7 +75,6 @@ class GoogleDriveAuthService {
         'Authorization': 'Bearer ${authorization.accessToken}',
       };
       return true;
-          return false;
     } catch (e) {
       debugPrint('GoogleDriveAuthService: authorization failed — $e');
       return false;
