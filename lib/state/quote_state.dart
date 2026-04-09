@@ -15,6 +15,7 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../models/catalog_item.dart';
 import '../services/google_drive_auth_service.dart';
+import '../services/onedrive_service.dart';
 
 class QuoteState extends ChangeNotifier {
   Timer? _debounceTimer;
@@ -26,6 +27,7 @@ class QuoteState extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final FirestoreService _firestoreService = FirestoreService();
   final GoogleDriveAuthService _driveAuthService = GoogleDriveAuthService.instance;
+  final OneDriveAuthService _oneDriveAuthService = OneDriveAuthService.instance;
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<List<QuoteModel>>? _cloudHistorySubscription;
   StreamSubscription<List<CatalogItem>>? _catalogSubscription;
@@ -42,6 +44,9 @@ class QuoteState extends ChangeNotifier {
   bool get isDriveLinked => _driveAuthService.isSignedIn;
   bool get isDriveAuthorized => _driveAuthService.isAuthorized;
   String? get driveUserEmail => _driveAuthService.currentUser?.email;
+
+  // OneDrive State
+  bool get isOneDriveLinked => _oneDriveAuthService.isSignedIn;
 
   List<QuoteModel> get jobHistory {
     final currentUserId = currentUser?.uid;
@@ -125,6 +130,7 @@ class QuoteState extends ChangeNotifier {
 
   Future<void> _initDriveService() async {
     await _driveAuthService.initialize();
+    _oneDriveAuthService.initialize();
     notifyListeners();
   }
 
@@ -398,6 +404,19 @@ class QuoteState extends ChangeNotifier {
     final folderId = await _driveAuthService.createBackupFolder();
     notifyListeners();
     return folderId;
+  }
+
+  // --- OneDrive Actions ---
+
+  Future<String?> linkOneDrive() async {
+    final error = await _oneDriveAuthService.signInWithMicrosoft();
+    notifyListeners();
+    return error;
+  }
+
+  Future<void> unlinkOneDrive() async {
+    await _oneDriveAuthService.signOut();
+    notifyListeners();
   }
 
   // --- Image Logic ---

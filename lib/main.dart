@@ -12,6 +12,8 @@ import 'models/material_item.dart';
 import 'models/trade_category.dart';
 import 'models/catalog_item.dart';
 
+final GlobalKey<NavigatorState> globalNavigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -51,6 +53,7 @@ class QuickQuoteApp extends StatelessWidget {
       builder: (context, state, child) {
         return MaterialApp(
           title: 'Pocket Quote',
+          navigatorKey: globalNavigatorKey,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: state.themeMode,

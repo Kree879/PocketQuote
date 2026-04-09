@@ -324,6 +324,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
 
+              // OneDrive Backups
+              const SizedBox(height: 32),
+              Text(
+                'OneDrive Backups',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.blue[700],
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Keep your data safe by creating a dedicated backup folder in your Microsoft OneDrive.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              GlassContainer(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        state.isOneDriveLinked 
+                          ? const Icon(Icons.check_circle, color: Colors.green, size: 28)
+                          : const Icon(Icons.cloud_upload, color: Colors.blue, size: 28),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('OneDrive Status', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              Text(
+                                state.isOneDriveLinked 
+                                  ? 'Connected'
+                                  : 'Not connected',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: state.isOneDriveLinked ? Colors.green[300] : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (state.isOneDriveLinked)
+                          IconButton(
+                            icon: const Icon(Icons.link_off, color: Colors.grey),
+                            onPressed: () => state.unlinkOneDrive(),
+                            tooltip: 'Disconnect',
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (!state.isOneDriveLinked)
+                      ElevatedButton.icon(
+                        onPressed: _isConnectingDrive ? null : () async {
+                          setState(() => _isConnectingDrive = true);
+                          final error = await state.linkOneDrive();
+                          setState(() => _isConnectingDrive = false);
+                          if (error != null && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to connect: $error'), backgroundColor: Colors.redAccent),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: _isConnectingDrive
+                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.window), // Windows logo approx
+                        label: const Text('Connect OneDrive'),
+                      )
+                    else 
+                      ElevatedButton.icon(
+                        onPressed: null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: const Text('OneDrive Linked Successfully'),
+                      ),
+                  ],
+                ),
+              ),
+
               // CSV Export
               if (isLoggedIn) ...[
                 const SizedBox(height: 32),

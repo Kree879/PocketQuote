@@ -10,6 +10,7 @@ import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
 import '../services/pdf_service.dart';
 import '../services/google_drive_auth_service.dart';
+import '../services/onedrive_service.dart';
 
 class JobsScreen extends StatefulWidget {
   const JobsScreen({super.key});
@@ -26,11 +27,12 @@ class _JobsScreenState extends State<JobsScreen> {
 
   Future<void> _handleBackupSelected(List<QuoteModel> history, QuoteState state) async {
     final driveService = GoogleDriveAuthService.instance;
+    final oneDriveService = OneDriveAuthService.instance;
     
-    if (!driveService.isAuthorized) {
+    if (!driveService.isAuthorized && !oneDriveService.isSignedIn) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Drive not connected. Please link it in settings.'), backgroundColor: Colors.orange),
+          const SnackBar(content: Text('No cloud drives connected. Please link Google Drive or OneDrive in settings.'), backgroundColor: Colors.orange),
         );
       }
       return;
@@ -71,13 +73,28 @@ class _JobsScreenState extends State<JobsScreen> {
           await tempFile.writeAsBytes(bytes);
           final fileBytes = await tempFile.readAsBytes();
 
-          final fileId = await driveService.uploadFile(
-            data: fileBytes,
-            fileName: fileName,
-            mimeType: 'application/pdf',
-          );
+          bool uploadedToAtLeastOne = false;
 
-          if (fileId != null) {
+          // Try Google Drive Backup
+          if (driveService.isAuthorized) {
+            final fileId = await driveService.uploadFile(
+              data: fileBytes,
+              fileName: fileName,
+              mimeType: 'application/pdf',
+            );
+            if (fileId != null) uploadedToAtLeastOne = true;
+          }
+
+          // Try OneDrive Backup
+          if (oneDriveService.isSignedIn) {
+            final success = await oneDriveService.uploadFile(
+              data: fileBytes, 
+              fileName: fileName,
+            );
+            if (success) uploadedToAtLeastOne = true;
+          }
+
+          if (uploadedToAtLeastOne) {
             successCount++;
           } else {
             errorCount++;
