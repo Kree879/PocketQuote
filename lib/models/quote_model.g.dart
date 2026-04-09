@@ -36,13 +36,14 @@ class QuoteModelAdapter extends TypeAdapter<QuoteModel> {
       photoPaths: (fields[16] as List).cast<String>(),
       projectTitle: fields[18] as String,
       firestoreId: fields[19] as String?,
+      userId: fields[20] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, QuoteModel obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -80,7 +81,9 @@ class QuoteModelAdapter extends TypeAdapter<QuoteModel> {
       ..writeByte(18)
       ..write(obj.projectTitle)
       ..writeByte(19)
-      ..write(obj.firestoreId);
+      ..write(obj.firestoreId)
+      ..writeByte(20)
+      ..write(obj.userId);
   }
 
   @override

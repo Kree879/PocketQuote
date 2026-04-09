@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "597608208696-v3lmjd674696mctfmggf41guit2gii2d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kree8designs.pocketquote",
+            "certificate_hash": "2f0207a1ba3a687ae2d6a2806f40efe6af1131a3"
+          }
+        },
+        {
           "client_id": "597608208696-3dad01ns1r4l6k1c0b86n43kplhn35l3.apps.googleusercontent.com",
           "client_type": 3
         }

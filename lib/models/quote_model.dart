@@ -70,6 +70,9 @@ class QuoteModel {
   @HiveField(19)
   String? firestoreId;
 
+  @HiveField(20)
+  String? userId;
+
   QuoteModel({
     required this.id,
     required this.clientName,
@@ -90,6 +93,7 @@ class QuoteModel {
     this.photoPaths = const [],
     this.projectTitle = '',
     this.firestoreId,
+    this.userId,
   });
 
   Map<String, dynamic> toJson() {
@@ -113,6 +117,7 @@ class QuoteModel {
       'photoPaths': photoPaths,
       'projectTitle': projectTitle,
       'firestoreId': firestoreId,
+      'userId': userId,
     };
   }
 
@@ -144,6 +149,7 @@ class QuoteModel {
       photoPaths: (json['photoPaths'] as List<dynamic>?)?.cast<String>().toList() ?? [],
       projectTitle: json['projectTitle'] as String? ?? '',
       firestoreId: json['firestoreId'] as String?,
+      userId: json['userId'] as String?,
     );
   }
 }

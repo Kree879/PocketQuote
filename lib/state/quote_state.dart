@@ -44,7 +44,8 @@ class QuoteState extends ChangeNotifier {
   String? get driveUserEmail => _driveAuthService.currentUser?.email;
 
   List<QuoteModel> get jobHistory {
-    final localJobs = _box.values.where((q) => q.status != QuoteStatus.draft).toList();
+    final currentUserId = currentUser?.uid;
+    final localJobs = _box.values.where((q) => q.status != QuoteStatus.draft && q.userId == currentUserId).toList();
     final Map<String, QuoteModel> merged = {};
     for (var q in localJobs) {
       merged[q.id] = q;
@@ -237,8 +238,9 @@ class QuoteState extends ChangeNotifier {
   // --- Persistence Logic ---
 
   void loadLocalDrafts() {
+    final currentUserId = currentUser?.uid;
     savedQuotes = _box.values
-        .where((q) => q.status == QuoteStatus.draft)
+        .where((q) => q.status == QuoteStatus.draft && q.userId == currentUserId)
         .toList()
       ..sort((a, b) => b.lastModified.compareTo(a.lastModified));
     notifyListeners();
@@ -292,6 +294,7 @@ class QuoteState extends ChangeNotifier {
       markupPercentage: markupPercentage,
       totalCostCached: totalCost,
       photoPaths: List.from(photoPaths),
+      userId: currentUser?.uid,
     );
 
     currentQuoteId = model.id; // ensure session locks onto this draft

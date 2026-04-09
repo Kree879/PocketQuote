@@ -70,3 +70,4 @@ dist/
 /coverage/
 app.*.symbols
 app.*.map.json
+key.properties
