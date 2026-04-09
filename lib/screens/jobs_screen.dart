@@ -77,6 +77,7 @@ class _JobsScreenState extends State<JobsScreen> {
 
           // Try Google Drive Backup
           if (driveService.isAuthorized) {
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up to Google Drive...'), duration: Duration(seconds: 1)));
             final fileId = await driveService.uploadFile(
               data: fileBytes,
               fileName: fileName,
@@ -85,11 +86,12 @@ class _JobsScreenState extends State<JobsScreen> {
             if (fileId != null) uploadedToAtLeastOne = true;
           }
 
-          // Try OneDrive Backup
           if (oneDriveService.isSignedIn) {
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up to OneDrive...'), duration: Duration(seconds: 1)));
             final success = await oneDriveService.uploadFile(
               data: fileBytes, 
               fileName: fileName,
+              mimeType: 'application/pdf',
             );
             if (success) uploadedToAtLeastOne = true;
           }

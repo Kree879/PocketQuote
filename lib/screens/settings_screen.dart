@@ -4,6 +4,7 @@ import '../state/quote_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
 import '../services/export_service.dart';
+import '../services/onedrive_service.dart';
 import 'package:intl/intl.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -400,15 +401,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       )
                     else 
                       ElevatedButton.icon(
-                        onPressed: null,
+                        onPressed: () async {
+                          setState(() => _isVerifyingDrive = true);
+                          final folderId = await OneDriveAuthService.instance.createBackupFolder();
+                          setState(() => _isVerifyingDrive = false);
+                          if (context.mounted) {
+                            if (folderId != null) {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('OneDrive Verified'),
+                                  content: Text('Backup folder found/created!\n\nFolder ID: $folderId'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              final errorMsg = OneDriveAuthService.instance.lastError ?? 'Unknown error';
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('OneDrive Error'),
+                                  content: SelectableText('Could not verify backup folder.\n\nError: $errorMsg'),
+                                  actions: [
+                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+                                  ],
+                                ),
+                              );
+                            }
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green[700],
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        icon: const Icon(Icons.check_circle_outline),
-                        label: const Text('OneDrive Linked Successfully'),
+                        icon: _isVerifyingDrive
+                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Icon(Icons.check_circle_outline),
+                        label: const Text('Verify Backup Folder'),
                       ),
                   ],
                 ),

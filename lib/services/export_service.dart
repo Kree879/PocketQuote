@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'google_drive_auth_service.dart';
+import 'onedrive_service.dart';
 import '../models/quote_model.dart';
 
 class ExportService {
@@ -110,11 +111,12 @@ class ExportService {
     required String userId,
   }) async {
     final driveService = GoogleDriveAuthService.instance;
+    final oneDriveService = OneDriveAuthService.instance;
     
-    if (!driveService.isAuthorized) {
+    if (!driveService.isAuthorized && !oneDriveService.isSignedIn) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Drive not connected. Please link it in settings.'), backgroundColor: Colors.orange),
+          const SnackBar(content: Text('No cloud drives connected. Please link Google Drive or OneDrive in settings.'), backgroundColor: Colors.orange),
         );
       }
       return;
@@ -131,12 +133,6 @@ class ExportService {
       final catalogFile = await _saveToTempFile(catalogBytes, catalogFileName);
       final catalogFileBytes = await catalogFile.readAsBytes();
 
-      await driveService.uploadFile(
-        data: catalogFileBytes,
-        fileName: catalogFileName,
-        mimeType: 'text/csv',
-      );
-
       // 2. Export History
       final historyBytes = await generateHistoryCsvBytes(userId);
       final historyFileName = 'PocketQuote_Quote_History_$dateStr.csv';
@@ -145,16 +141,48 @@ class ExportService {
       final historyFile = await _saveToTempFile(historyBytes, historyFileName);
       final historyFileBytes = await historyFile.readAsBytes();
 
-      await driveService.uploadFile(
-        data: historyFileBytes,
-        fileName: historyFileName,
-        mimeType: 'text/csv',
-      );
+      bool uploaded = false;
+
+      if (driveService.isAuthorized) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up CSVs to Google Drive...'), duration: Duration(seconds: 1)));
+        await driveService.uploadFile(
+          data: catalogFileBytes,
+          fileName: catalogFileName,
+          mimeType: 'text/csv',
+        );
+        await driveService.uploadFile(
+          data: historyFileBytes,
+          fileName: historyFileName,
+          mimeType: 'text/csv',
+        );
+        uploaded = true;
+      }
+
+      if (oneDriveService.isSignedIn) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up CSVs to OneDrive...'), duration: Duration(seconds: 1)));
+        final out1 = await oneDriveService.uploadFile(
+          data: catalogFileBytes,
+          fileName: catalogFileName,
+          mimeType: 'text/csv',
+        );
+        final out2 = await oneDriveService.uploadFile(
+          data: historyFileBytes,
+          fileName: historyFileName,
+          mimeType: 'text/csv',
+        );
+        if (out1 || out2) uploaded = true;
+      }
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pocket Quote Data (Catalog & History) uploaded to Drive!'), backgroundColor: Colors.green),
-        );
+        if (uploaded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pocket Quote Data (Catalog & History) uploaded to Cloud Backup!'), backgroundColor: Colors.green),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to upload data to Cloud Backup.'), backgroundColor: Colors.redAccent),
+          );
+        }
       }
 
     } catch (e) {

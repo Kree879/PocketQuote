@@ -10,6 +10,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/quote_model.dart';
 import '../state/quote_state.dart';
 import 'google_drive_auth_service.dart';
+import 'onedrive_service.dart';
 import 'firestore_service.dart';
 
 class PdfService {
@@ -29,12 +30,13 @@ class PdfService {
     bool isInvoice = false,
   }) async {
     final driveService = GoogleDriveAuthService.instance;
+    final oneDriveService = OneDriveAuthService.instance;
     final firestore = FirestoreService();
     
-    if (!driveService.isAuthorized) {
+    if (!driveService.isAuthorized && !oneDriveService.isSignedIn) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Google Drive not connected. Please link it in settings.'), backgroundColor: Colors.orange),
+          const SnackBar(content: Text('No cloud drives connected. Please link Google Drive or OneDrive in settings.'), backgroundColor: Colors.orange),
         );
       }
       return;
@@ -64,22 +66,37 @@ class PdfService {
       final tempFile = await _saveToTempFile(bytes, fileName);
       final fileBytes = await tempFile.readAsBytes();
  
-      // 5. Upload to Drive natively without hardcoded folderId
-      final fileId = await driveService.uploadFile(
-        data: fileBytes,
-        fileName: fileName,
-        mimeType: 'application/pdf',
-      );
+      // 5. Upload to Drives
+      bool uploaded = false;
+      
+      if (driveService.isAuthorized) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up to Google Drive...'), duration: Duration(seconds: 1)));
+        final fileId = await driveService.uploadFile(
+          data: fileBytes,
+          fileName: fileName,
+          mimeType: 'application/pdf',
+        );
+        if (fileId != null) uploaded = true;
+      }
+
+      if (oneDriveService.isSignedIn) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up to OneDrive...'), duration: Duration(seconds: 1)));
+        final success = await oneDriveService.uploadFile(
+          data: fileBytes,
+          fileName: fileName,
+          mimeType: 'application/pdf',
+        );
+        if (success) uploaded = true;
+      }
  
       if (context.mounted) {
- 
-        if (fileId != null) {
+        if (uploaded) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pocket Quote PDF successfully uploaded to Drive!'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Pocket Quote PDF successfully uploaded to Cloud Backup!'), backgroundColor: Colors.green),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to upload Pocket Quote PDF to Drive.'), backgroundColor: Colors.redAccent),
+            const SnackBar(content: Text('Failed to upload Pocket Quote PDF to Cloud Backup.'), backgroundColor: Colors.redAccent),
           );
         }
       }
