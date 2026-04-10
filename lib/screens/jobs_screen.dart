@@ -57,7 +57,7 @@ class _JobsScreenState extends State<JobsScreen> {
                             quote.status == QuoteStatus.invoiced || 
                             quote.status == QuoteStatus.paid;
                             
-          final bytes = await PdfService.generateQuotePDF(
+          final generated = await PdfService.generateQuotePDF(
             quote: quote,
             globalState: state,
             isInvoice: isInvoice,
@@ -66,34 +66,50 @@ class _JobsScreenState extends State<JobsScreen> {
           final jobName = quote.projectTitle.isNotEmpty ? quote.projectTitle : 
                          (quote.clientName.isNotEmpty ? quote.clientName : "Project");
           final safeJobName = jobName.trim().replaceAll(RegExp(r'[\\/:*?"<>|]'), '-').replaceAll(' ', '_');
-          final fileName = "${safeJobName}_${dateStr}_Quote.pdf";
+          final internalFileName = "Internal_${safeJobName}_${dateStr}_Quote.pdf";
+          final clientFileName = "Client_${safeJobName}_${dateStr}_Quote.pdf";
 
           final tempDir = await getTemporaryDirectory();
-          final tempFile = File('${tempDir.path}/$fileName');
-          await tempFile.writeAsBytes(bytes);
-          final fileBytes = await tempFile.readAsBytes();
+          
+          final internalTempFile = File('${tempDir.path}/$internalFileName');
+          await internalTempFile.writeAsBytes(generated.internalPdf);
+          final internalFileBytes = await internalTempFile.readAsBytes();
+          
+          final clientTempFile = File('${tempDir.path}/$clientFileName');
+          await clientTempFile.writeAsBytes(generated.clientPdf);
+          final clientFileBytes = await clientTempFile.readAsBytes();
 
           bool uploadedToAtLeastOne = false;
 
           // Try Google Drive Backup
           if (driveService.isAuthorized) {
             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up to Google Drive...'), duration: Duration(seconds: 1)));
-            final fileId = await driveService.uploadFile(
-              data: fileBytes,
-              fileName: fileName,
+            final intId = await driveService.uploadFile(
+              data: internalFileBytes,
+              fileName: internalFileName,
               mimeType: 'application/pdf',
             );
-            if (fileId != null) uploadedToAtLeastOne = true;
+            final cliId = await driveService.uploadFile(
+              data: clientFileBytes,
+              fileName: clientFileName,
+              mimeType: 'application/pdf',
+            );
+            if (intId != null || cliId != null) uploadedToAtLeastOne = true;
           }
 
           if (oneDriveService.isSignedIn) {
             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Backing up to OneDrive...'), duration: Duration(seconds: 1)));
-            final success = await oneDriveService.uploadFile(
-              data: fileBytes, 
-              fileName: fileName,
+            final intOk = await oneDriveService.uploadFile(
+              data: internalFileBytes, 
+              fileName: internalFileName,
               mimeType: 'application/pdf',
             );
-            if (success) uploadedToAtLeastOne = true;
+            final cliOk = await oneDriveService.uploadFile(
+              data: clientFileBytes, 
+              fileName: clientFileName,
+              mimeType: 'application/pdf',
+            );
+            if (intOk || cliOk) uploadedToAtLeastOne = true;
           }
 
           if (uploadedToAtLeastOne) {
