@@ -617,7 +617,8 @@ class QuoteState extends ChangeNotifier {
     final normalizedName = name.trim();
     if (normalizedName.isEmpty) return;
 
-    final key = normalizedName.toLowerCase().replaceAll(' ', '_');
+    // Use a composite key to ensure items with the same name in different categories don't collide
+    final key = "${category.index}_${normalizedName.toLowerCase().replaceAll(' ', '_')}";
     
     // Check if it already exists in hardcoded quickMaterials (we don't need to save those)
     final tradeInfo = TradeCategoryInfo.fromCategory(category);
@@ -626,22 +627,58 @@ class QuoteState extends ChangeNotifier {
     );
     if (isHardcoded) return;
 
-    // Check if already in user catalog
-    if (!_catalogBox.containsKey(key)) {
-      final newItem = CatalogItem(
+    // Check if already in user catalog OR if price needs update
+    final existing = _catalogBox.get(key);
+    if (existing == null || existing.defaultCost != cost) {
+      final item = CatalogItem(
         name: normalizedName,
         defaultCost: cost,
         category: category,
       );
       
-      await _catalogBox.put(key, newItem);
+      await _catalogBox.put(key, item);
       _loadLocalCatalog();
 
       // Sync to Firestore if logged in
       if (currentUser != null) {
-        await _firestoreService.uploadCatalogItem(currentUser!.uid, newItem);
+        await _firestoreService.uploadCatalogItem(currentUser!.uid, item);
       }
     }
+  }
+
+  /// Bulk upsert items from CSV import
+  Future<int> importCatalogBatch(List<CatalogItem> items) async {
+    if (items.isEmpty) return 0;
+
+    int progress = 0;
+    final List<CatalogItem> toSync = [];
+
+    for (final item in items) {
+      final key = "${item.category.index}_${item.name.toLowerCase().replaceAll(' ', '_')}";
+      
+      // Check if update is actually needed (price change or new item)
+      final existing = _catalogBox.get(key);
+      if (existing == null || existing.defaultCost != item.defaultCost) {
+        await _catalogBox.put(key, item);
+        toSync.add(item);
+        progress++;
+      }
+    }
+
+    if (progress > 0) {
+      _loadLocalCatalog();
+      
+      // Sync to Firestore in one batch if possible, or iterate
+      if (currentUser != null) {
+        // Using the existing syncAllLocalDataToCloud or similar logic if needed, 
+        // but for now let's just push the new items.
+        for (final item in toSync) {
+          await _firestoreService.uploadCatalogItem(currentUser!.uid, item);
+        }
+      }
+    }
+
+    return progress;
   }
 
   void removeMaterial(String id) {

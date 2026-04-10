@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../state/quote_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
+import '../services/csv_import_service.dart';
+import '../models/catalog_item.dart';
 
 class BusinessScreen extends StatefulWidget {
   const BusinessScreen({super.key});
@@ -25,6 +27,7 @@ class _BusinessScreenState extends State<BusinessScreen> {
   final _branchCodeController = TextEditingController();
   final _swiftCodeController = TextEditingController();
   String _accountType = 'Cheque / Current';
+  bool _isImporting = false;
 
   @override
   void initState() {
@@ -89,6 +92,49 @@ class _BusinessScreenState extends State<BusinessScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Business Defaults Saved')),
     );
+  }
+
+  Future<void> _importCsv() async {
+    setState(() => _isImporting = true);
+    try {
+      final items = await CsvImportService.pickAndParseCsv();
+      if (items.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Import cancelled or CSV is empty')),
+          );
+        }
+        return;
+      }
+
+      final count = await context.read<QuoteState>().importCatalogBatch(items);
+      
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: const Color(0xFF1A1D25),
+            title: const Text('Import Complete', style: TextStyle(color: Colors.white)),
+            content: Text('Successfully imported/updated $count items in your catalog.', 
+              style: const TextStyle(color: Colors.white70)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Import error: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
   }
 
   @override
@@ -237,7 +283,57 @@ class _BusinessScreenState extends State<BusinessScreen> {
             ),
             child: const Text('Save Business Defaults'),
           ),
+          const SizedBox(height: 32),
+
+          Text(
+            'Catalog Management',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.accentColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Bulk import your standard material items and pricing using a CSV file.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 24),
+
+          GlassContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Import Instructions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '• Prepare a CSV with headers: ItemName, Price, Category\n'
+                  '• Valid Categories: Electrical, Plumbing, Pool, Garden, Handyman, General\n'
+                  '• Items with same name & category will update the price.',
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _isImporting ? null : _importCsv,
+                    icon: _isImporting 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.upload_file),
+                    label: Text(_isImporting ? 'Parsing CSV...' : 'Select CSV to Import'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(color: AppTheme.accentColor.withAlpha(100)),
+                      foregroundColor: AppTheme.accentColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 48),
         ],
       ),
     );

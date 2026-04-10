@@ -51,7 +51,7 @@ dependencies:
   firebase_auth: ^6.3.0
   cloud_firestore: ^6.2.0
   path: ^1.9.1
-  csv: ^6.0.0
+  csv: 6.0.0
   google_sign_in: ^7.2.0
   googleapis: ^16.0.0
   googleapis_auth: ^2.0.0
@@ -59,6 +59,7 @@ dependencies:
   extension_google_sign_in_as_googleapis_auth: ^3.0.0
   in_app_purchase: ^3.2.3
   aad_oauth: ^1.0.1
+  file_picker: ^11.0.2
 
 dev_dependencies:
   flutter_test:
