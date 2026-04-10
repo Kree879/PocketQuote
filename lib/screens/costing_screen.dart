@@ -152,7 +152,7 @@ class _CostingScreenState extends State<CostingScreen> {
                                 final CommonMaterial option = options.elementAt(index);
                                 return ListTile(
                                   title: Text(option.name),
-                                  subtitle: Text('Default: R${option.cost.toStringAsFixed(2)}',
+                                  subtitle: Text('Default: ${context.read<QuoteState>().currencySymbol}${option.cost.toStringAsFixed(2)}',
                                     style: Theme.of(context).textTheme.bodySmall),
                                   trailing: Icon(Icons.add_circle_outline, color: catInfo.glowColor, size: 18),
                                   onTap: () => onSelected(option),
@@ -175,7 +175,7 @@ class _CostingScreenState extends State<CostingScreen> {
                       child: TextField(
                         controller: costController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: 'Cost', prefixText: 'R'),
+                        decoration: InputDecoration(labelText: 'Cost', prefixText: quoteState.currencySymbol),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -457,7 +457,7 @@ class _CostingScreenState extends State<CostingScreen> {
                         children: [
                           Expanded(
                             child: Text(
-                              'Standard Call-Out Fee (R${state.callOutFeeAmount.toStringAsFixed(2)})',
+                              'Standard Call-Out Fee (${state.currencySymbol}${state.callOutFeeAmount.toStringAsFixed(2)})',
                               style: Theme.of(context).textTheme.bodyLarge,
                             ),
                           ),
@@ -483,7 +483,7 @@ class _CostingScreenState extends State<CostingScreen> {
                             child: TextField(
                               controller: _laborRateController,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'Hourly Rate', prefixText: 'R'),
+                              decoration: InputDecoration(labelText: 'Hourly Rate', prefixText: state.currencySymbol),
                               onChanged: (_) => _onLaborChanged(),
                             ),
                           ),
@@ -520,7 +520,7 @@ class _CostingScreenState extends State<CostingScreen> {
                             child: TextField(
                               controller: _travelRateController,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'Rate/km', prefixText: 'R'),
+                              decoration: InputDecoration(labelText: 'Rate/km', prefixText: state.currencySymbol),
                               onChanged: (_) => _onTravelChanged(),
                             ),
                           ),
@@ -561,11 +561,11 @@ class _CostingScreenState extends State<CostingScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(item.name, style: Theme.of(context).textTheme.titleMedium),
-                                  Text('${item.quantity}x @ R${item.cost.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyMedium),
+                                  Text('${item.quantity}x @ ${state.currencySymbol}${item.cost.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyMedium),
                                 ],
                               ),
                             ),
-                            Text('R${item.totalCost.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                            Text('${state.currencySymbol}${item.totalCost.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                             IconButton(
                               icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                               onPressed: () => state.removeMaterial(item.id),
@@ -631,7 +631,7 @@ class _CostingScreenState extends State<CostingScreen> {
                         children: [
                           Text('Total Cost', style: Theme.of(context).textTheme.bodyLarge),
                           Text(
-                            'R${state.totalCost.toStringAsFixed(2)}',
+                            '${state.currencySymbol}${state.totalCost.toStringAsFixed(2)}',
                             style: Theme.of(context).textTheme.displayMedium?.copyWith(
                               color: categoryInfo.glowColor,
                             ),

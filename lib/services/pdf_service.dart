@@ -159,7 +159,7 @@ class PdfService {
 
     final text = "Hi ${quote.clientName.isEmpty ? 'Customer' : quote.clientName},\n\n"
                  "Please find the attached ${isInvoice ? 'invoice' : 'quote'} for $projectName.\n"
-                 "Total Amount: R${computedTotal.toStringAsFixed(2)}\n\n"
+                 "Total Amount: ${globalState.currencySymbol}${computedTotal.toStringAsFixed(2)}\n\n"
                  "Best regards,\n"
                  "${globalState.companyName.isNotEmpty ? globalState.companyName : 'Pocket Quote Contractor'}";
 
@@ -241,6 +241,7 @@ class PdfService {
     List<pw.MemoryImage> photoImages = const [],
   }) async {
     final pdf = pw.Document();
+    final cs = globalState.currencySymbol;
 
     // Use overrides if provided (for Drive backup logic)
     final hRate = overrideHourlyRate ?? quote.hourlyRate;
@@ -350,8 +351,8 @@ class PdfService {
                   children: [
                     pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Description', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
                     pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Qty', textAlign: pw.TextAlign.center, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Unit (R)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Total (R)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Unit ($cs)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                    pw.Padding(padding: const pw.EdgeInsets.all(8), child: pw.Text('Total ($cs)', textAlign: pw.TextAlign.right, style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
                   ],
                 ),
                 ...quote.materials.map((m) => pw.TableRow(
@@ -381,11 +382,11 @@ class PdfService {
                   width: 250,
                   child: pw.Column(
                     children: [
-                      _buildPdfRow('Materials Base:', baseMaterialsCost),
-                      _buildPdfRow('Materials Markup ($mPercentage%):', materialsMarkupCost),
-                      _buildPdfRow('Labor Cost:', laborCost),
-                      _buildPdfRow('Travel Cost:', travelCost),
-                      if (quote.useCallOutFee) _buildPdfRow('Call-Out Fee:', callOutCost),
+                      _buildPdfRow('Materials Base:', baseMaterialsCost, currencySymbol: cs),
+                      _buildPdfRow('Materials Markup ($mPercentage%):', materialsMarkupCost, currencySymbol: cs),
+                      _buildPdfRow('Labor Cost:', laborCost, currencySymbol: cs),
+                      _buildPdfRow('Travel Cost:', travelCost, currencySymbol: cs),
+                      if (quote.useCallOutFee) _buildPdfRow('Call-Out Fee:', callOutCost, currencySymbol: cs),
                       pw.Divider(thickness: 1, color: PdfColors.grey400),
                       pw.Container(
                         padding: const pw.EdgeInsets.symmetric(vertical: 8),
@@ -393,7 +394,7 @@ class PdfService {
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Text('TOTAL AMOUNT:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                            pw.Text('R${computedTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                            pw.Text('$cs${computedTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
                           ],
                         ),
                       ),
@@ -424,6 +425,7 @@ class PdfService {
     List<pw.MemoryImage> photoImages = const [],
   }) async {
     final pdf = pw.Document();
+    final cs = globalState.currencySymbol;
 
     // Use overrides if provided (for Drive backup logic)
     final hRate = overrideHourlyRate ?? quote.hourlyRate;
@@ -562,12 +564,12 @@ class PdfService {
                   width: 320,
                   child: pw.Column(
                     children: [
-                      _buildPdfRow('Materials (Supply & Installation):', materialsCombined),
+                      _buildPdfRow('Materials (Supply & Installation):', materialsCombined, currencySymbol: cs),
                       pw.SizedBox(height: 2),
-                      _buildPdfRow('Labor (Installation, testing & commissioning):', laborCost),
+                      _buildPdfRow('Labor (Installation, testing & commissioning):', laborCost, currencySymbol: cs),
                       if (additionalCharges > 0) ...[
                         pw.SizedBox(height: 2),
-                        _buildPdfRow('Additional Charges (Travel, call-out):', additionalCharges),
+                        _buildPdfRow('Additional Charges (Travel, call-out):', additionalCharges, currencySymbol: cs),
                       ],
                       pw.Divider(thickness: 1, color: PdfColors.grey400),
                       pw.Container(
@@ -576,7 +578,7 @@ class PdfService {
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Text('TOTAL AMOUNT:', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                            pw.Text('R${computedTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
+                            pw.Text('$cs${computedTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: PdfColors.blue900)),
                           ],
                         ),
                       ),
@@ -624,7 +626,7 @@ class PdfService {
     }
   }
 
-  static pw.Widget _buildPdfRow(String label, double amount) {
+  static pw.Widget _buildPdfRow(String label, double amount, {String currencySymbol = 'R'}) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(vertical: 2),
       child: pw.Row(
@@ -633,7 +635,7 @@ class PdfService {
           pw.Expanded(
             child: pw.Text(label, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
           ),
-          pw.Text('R${amount.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10)),
+          pw.Text('$currencySymbol${amount.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 10)),
         ],
       ),
     );

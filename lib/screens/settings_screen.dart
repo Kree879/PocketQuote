@@ -23,7 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _isExporting = true);
     try {
       // Use the new Batch Drive export (Catalog + History)
-      await ExportService.exportAllDataBatch(context: context, userId: userId);
+      await ExportService.exportAllDataBatch(context: context, userId: userId, currencySymbol: context.read<QuoteState>().currencySymbol);
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -157,6 +157,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                       activeThumbColor: AppTheme.accentColor,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    Divider(height: 1, color: Theme.of(context).dividerColor.withAlpha(40)),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      title: const Text('Currency', style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(state.currencyDisplayName),
+                      trailing: DropdownButton<String>(
+                        value: state.currencySymbol,
+                        dropdownColor: Theme.of(context).colorScheme.surface,
+                        underline: const SizedBox.shrink(),
+                        icon: Icon(Icons.keyboard_arrow_down, color: Theme.of(context).iconTheme.color?.withAlpha(178)),
+                        items: const [
+                          DropdownMenuItem(value: 'R', child: Text('R  (ZAR)')),
+                          DropdownMenuItem(value: '\$', child: Text('\$  (USD)')),
+                          DropdownMenuItem(value: '£', child: Text('£  (GBP)')),
+                          DropdownMenuItem(value: '€', child: Text('€  (EUR)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) state.setCurrency(val);
+                        },
+                      ),
                     ),
                   ],
                 ),

@@ -201,7 +201,7 @@ class DashboardScreen extends StatelessWidget {
                                   ),
                                   const Spacer(),
                                   Text(
-                                    'R${draft.totalCostCached.toStringAsFixed(2)}',
+                                    '${state.currencySymbol}${draft.totalCostCached.toStringAsFixed(2)}',
                                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                                       color: AppTheme.accentColor,
                                       fontWeight: FontWeight.bold,
@@ -280,7 +280,7 @@ class DashboardScreen extends StatelessWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text('R${quote.totalCostCached.toStringAsFixed(2)}', 
+                                    Text('${state.currencySymbol}${quote.totalCostCached.toStringAsFixed(2)}', 
                                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.bold,
                                          )),

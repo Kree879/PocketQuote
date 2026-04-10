@@ -73,24 +73,24 @@ class QuoteSummaryScreen extends StatelessWidget {
                       Text('Final Estimate', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
                       Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(50)),
                       if (state.useCallOutFee) ...[
-                        _SummaryRow(title: 'Call-Out Fee', amount: state.callOutFeeAmount, context: context),
+                        _SummaryRow(title: 'Call-Out Fee', amount: state.callOutFeeAmount, context: context, currencySymbol: state.currencySymbol),
                         const SizedBox(height: 12),
                       ],
-                      _SummaryRow(title: 'Labor', amount: state.laborCost, context: context),
+                      _SummaryRow(title: 'Labor', amount: state.laborCost, context: context, currencySymbol: state.currencySymbol),
                       const SizedBox(height: 12),
-                      _SummaryRow(title: 'Travel', amount: state.travelCost, context: context),
+                      _SummaryRow(title: 'Travel', amount: state.travelCost, context: context, currencySymbol: state.currencySymbol),
                       const SizedBox(height: 12),
-                      _SummaryRow(title: 'Materials (Base)', amount: state.baseMaterialsCost, context: context),
+                      _SummaryRow(title: 'Materials (Base)', amount: state.baseMaterialsCost, context: context, currencySymbol: state.currencySymbol),
                       if (state.markupPercentage > 0) ...[
                         const SizedBox(height: 12),
-                        _SummaryRow(title: 'Material Markup (${state.markupPercentage}%)', amount: state.materialsMarkupCost, context: context),
+                        _SummaryRow(title: 'Material Markup (${state.markupPercentage}%)', amount: state.materialsMarkupCost, context: context, currencySymbol: state.currencySymbol),
                       ],
                       Divider(height: 32, color: Theme.of(context).dividerColor.withAlpha(50)),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('TOTAL DUE', style: Theme.of(context).textTheme.titleMedium),
-                          Text('R${state.totalCost.toStringAsFixed(2)}', 
+                          Text('${state.currencySymbol}${state.totalCost.toStringAsFixed(2)}', 
                                style: Theme.of(context).textTheme.displayMedium?.copyWith(
                                 color: catInfo.glowColor,
                                )),
@@ -197,8 +197,9 @@ class _SummaryRow extends StatelessWidget {
   final String title;
   final double amount;
   final BuildContext context;
+  final String currencySymbol;
 
-  const _SummaryRow({required this.title, required this.amount, required this.context});
+  const _SummaryRow({required this.title, required this.amount, required this.context, this.currencySymbol = 'R'});
 
   @override
   Widget build(BuildContext _) {
@@ -206,7 +207,7 @@ class _SummaryRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title, style: Theme.of(context).textTheme.bodyLarge),
-        Text('R${amount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+        Text('$currencySymbol${amount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
       ],
     );
   }

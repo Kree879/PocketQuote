@@ -155,7 +155,7 @@ class _JobCardState extends State<JobCard> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text('Final Price', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                              Text('R${finalPrice.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('${context.read<QuoteState>().currencySymbol}${finalPrice.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                             ],
                           ),
                         ),
@@ -263,7 +263,7 @@ class _JobCardState extends State<JobCard> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600)),
-          Text('R${amount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text('${context.read<QuoteState>().currencySymbol}${amount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -276,7 +276,7 @@ class _JobCardState extends State<JobCard> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title, style: Theme.of(context).textTheme.bodyMedium),
-          Text('R${amount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyLarge),
+          Text('${context.read<QuoteState>().currencySymbol}${amount.toStringAsFixed(2)}', style: Theme.of(context).textTheme.bodyLarge),
         ],
       ),
     );
@@ -341,7 +341,7 @@ class _JobCardState extends State<JobCard> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'R${widget.quote.totalCostCached.toStringAsFixed(2)}',
+                    '${context.read<QuoteState>().currencySymbol}${widget.quote.totalCostCached.toStringAsFixed(2)}',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),

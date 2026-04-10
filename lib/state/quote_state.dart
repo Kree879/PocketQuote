@@ -116,6 +116,9 @@ class QuoteState extends ChangeNotifier {
   // App Theme Mode
   bool isDarkMode = true;
 
+  // Currency
+  String currencySymbol = 'R';
+
   // Sync Status
   bool isSyncing = false;
   DateTime? lastSyncedAt;
@@ -237,6 +240,7 @@ class QuoteState extends ChangeNotifier {
     branchCode = _settingsBox.get('branchCode', defaultValue: '');
     swiftCode = _settingsBox.get('swiftCode', defaultValue: '');
     isDarkMode = _settingsBox.get('isDarkMode', defaultValue: true);
+    currencySymbol = _settingsBox.get('currencySymbol', defaultValue: 'R');
     final syncMs = _settingsBox.get('lastSyncedAt');
     if (syncMs != null) lastSyncedAt = DateTime.fromMillisecondsSinceEpoch(syncMs);
   }
@@ -783,4 +787,23 @@ class QuoteState extends ChangeNotifier {
   }
 
   ThemeMode get themeMode => isDarkMode ? ThemeMode.dark : ThemeMode.light;
+
+  // --- Currency Logic ---
+
+  /// Returns a display-friendly label for the current currency.
+  String get currencyDisplayName {
+    switch (currencySymbol) {
+      case 'R': return 'ZAR — South African Rand (R)';
+      case '\$': return 'USD — US Dollar (\$)';
+      case '£': return 'GBP — British Pound (£)';
+      case '€': return 'EUR — Euro (€)';
+      default: return currencySymbol;
+    }
+  }
+
+  void setCurrency(String symbol) {
+    currencySymbol = symbol;
+    _settingsBox.put('currencySymbol', symbol);
+    notifyListeners();
+  }
 }

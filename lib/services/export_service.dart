@@ -22,11 +22,11 @@ class ExportService {
   }
 
   /// Generates the Catalog CSV as bytes.
-  static Future<Uint8List> generateCatalogCsvBytes(String userId) async {
+  static Future<Uint8List> generateCatalogCsvBytes(String userId, {String currencySymbol = 'R'}) async {
     final catalogSnap = await _db.collection('users').doc(userId).collection('catalog').get();
 
     final List<List<dynamic>> rows = [
-      ['Item Name', 'Price (R)', 'Unit']
+      ['Item Name', 'Price ($currencySymbol)', 'Unit']
     ];
 
     for (final doc in catalogSnap.docs) {
@@ -43,7 +43,7 @@ class ExportService {
   }
 
   /// Generates the History CSV as bytes.
-  static Future<Uint8List> generateHistoryCsvBytes(String userId) async {
+  static Future<Uint8List> generateHistoryCsvBytes(String userId, {String currencySymbol = 'R'}) async {
     final quotesSnap = await _db
         .collection('users')
         .doc(userId)
@@ -55,12 +55,12 @@ class ExportService {
       [
         'Client', 
         'Project', 
-        'Materials Base (R)', 
+        'Materials Base ($currencySymbol)', 
         'Materials Markup (%)', 
-        'Labor Cost (R)', 
-        'Travel Cost (R)', 
-        'Call-Out Fee (R)', 
-        'Total (R)', 
+        'Labor Cost ($currencySymbol)', 
+        'Travel Cost ($currencySymbol)', 
+        'Call-Out Fee ($currencySymbol)', 
+        'Total ($currencySymbol)', 
         'Date'
       ]
     ];
@@ -109,6 +109,7 @@ class ExportService {
   static Future<void> exportAllDataBatch({
     required BuildContext context,
     required String userId,
+    String currencySymbol = 'R',
   }) async {
     final driveService = GoogleDriveAuthService.instance;
     final oneDriveService = OneDriveAuthService.instance;
@@ -126,7 +127,7 @@ class ExportService {
       final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
       
       // 1. Export Catalog
-      final catalogBytes = await generateCatalogCsvBytes(userId);
+      final catalogBytes = await generateCatalogCsvBytes(userId, currencySymbol: currencySymbol);
       final catalogFileName = 'PocketQuote_Catalog_$dateStr.csv';
       
       // Save locally for a split second
@@ -134,7 +135,7 @@ class ExportService {
       final catalogFileBytes = await catalogFile.readAsBytes();
 
       // 2. Export History
-      final historyBytes = await generateHistoryCsvBytes(userId);
+      final historyBytes = await generateHistoryCsvBytes(userId, currencySymbol: currencySymbol);
       final historyFileName = 'PocketQuote_Quote_History_$dateStr.csv';
       
       // Save locally
