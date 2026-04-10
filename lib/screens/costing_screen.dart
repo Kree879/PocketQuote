@@ -8,6 +8,7 @@ import '../state/quote_state.dart';
 import '../widgets/glass_container.dart';
 import '../models/material_item.dart';
 import '../models/trade_category.dart';
+import '../theme/app_theme.dart';
 import 'quote_summary_screen.dart';
 
 class CostingScreen extends StatefulWidget {
@@ -130,7 +131,19 @@ class _CostingScreenState extends State<CostingScreen> {
                       decoration: InputDecoration(
                         labelText: 'Item Name',
                         hintText: 'Search or add new...',
+                        filled: true,
+                        fillColor: Theme.of(context).brightness == Brightness.dark 
+                            ? AppTheme.darkSecondaryColor 
+                            : Colors.white,
                         suffixIcon: Icon(Icons.search, color: catInfo.glowColor.withAlpha(150)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: catInfo.glowColor.withAlpha(80)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: catInfo.glowColor.withAlpha(80)),
+                        ),
                       ),
                     );
                   },
@@ -139,26 +152,52 @@ class _CostingScreenState extends State<CostingScreen> {
                       alignment: Alignment.topLeft,
                       child: Material(
                         color: Colors.transparent,
-                        child: SizedBox(
+                        elevation: 8,
+                        child: Container(
                           height: 200,
                           width: MediaQuery.of(context).size.width - 48,
-                          child: GlassContainer(
-                            borderRadius: 16,
-                            padding: EdgeInsets.zero,
-                            child: ListView.builder(
-                              padding: EdgeInsets.zero,
-                              itemCount: options.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final CommonMaterial option = options.elementAt(index);
-                                return ListTile(
-                                  title: Text(option.name),
-                                  subtitle: Text('Default: ${context.read<QuoteState>().currencySymbol}${option.cost.toStringAsFixed(2)}',
-                                    style: Theme.of(context).textTheme.bodySmall),
-                                  trailing: Icon(Icons.add_circle_outline, color: catInfo.glowColor, size: 18),
-                                  onTap: () => onSelected(option),
-                                );
-                              },
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                                ? AppTheme.darkSecondaryColor 
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? Colors.white.withAlpha(30) 
+                                  : Colors.black.withAlpha(30),
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(100),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: options.length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final CommonMaterial option = options.elementAt(index);
+                              final isDark = Theme.of(context).brightness == Brightness.dark;
+                              return ListTile(
+                                title: Text(
+                                  option.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : Colors.black87,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Default: ${context.read<QuoteState>().currencySymbol}${option.cost.toStringAsFixed(2)}',
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: isDark ? Colors.white70 : Colors.black54,
+                                  ),
+                                ),
+                                trailing: Icon(Icons.add_circle, color: catInfo.glowColor, size: 20),
+                                onTap: () => onSelected(option),
+                              );
+                            },
                           ),
                         ),
                       ),

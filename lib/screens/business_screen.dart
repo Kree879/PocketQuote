@@ -4,7 +4,6 @@ import '../state/quote_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
 import '../services/csv_import_service.dart';
-import '../models/catalog_item.dart';
 
 class BusinessScreen extends StatefulWidget {
   const BusinessScreen({super.key});
