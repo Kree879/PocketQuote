@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "597608208696-0iaqj3hjns54dl875f4jt6mejicdhnqt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kree8designs.pocketquote",
+            "certificate_hash": "5b35f350af340fc7a765035bf8119efe62c40574"
+          }
+        },
+        {
           "client_id": "597608208696-ukf93cnvit7rd4s6udfsq28vffc8sidl.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
