@@ -11,6 +11,7 @@ class AppTheme {
   static const Color lightSurfaceColor = Colors.white;
   static const Color lightTextPrimary = Color(0xFF111827);
   static const Color lightTextSecondary = Color(0xFF6B7280);
+  static const Color lightAccentColor = Color(0xFF008E3C); // Darker Success Green for light mode
 
   // Legacy constants for backwards compatibility with existing screens
   static const Color secondaryColor = Color(0xFF1C2541); 
@@ -24,8 +25,8 @@ class AppTheme {
       scaffoldBackgroundColor: lightBackgroundColor,
       primaryColor: primaryColor,
       colorScheme: const ColorScheme.light(
-        primary: accentColor,
-        secondary: accentColor,
+        primary: lightAccentColor,
+        secondary: lightAccentColor,
         surface: lightSurfaceColor,
         error: Colors.redAccent,
         onPrimary: Colors.white,
@@ -51,7 +52,7 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentColor,
+          backgroundColor: lightAccentColor,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
@@ -72,7 +73,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: accentColor),
+          borderSide: const BorderSide(color: lightAccentColor),
         ),
         labelStyle: const TextStyle(color: lightTextSecondary),
         hintStyle: const TextStyle(color: lightTextSecondary),

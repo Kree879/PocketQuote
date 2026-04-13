@@ -90,7 +90,7 @@ class CategoryScreen extends StatelessWidget {
                                   child: Icon(
                                     info.icon,
                                     size: 40,
-                                    color: info.glowColor,
+                                    color: info.getDisplayColor(context),
                                   ),
                                 ),
                                 const SizedBox(height: 16),

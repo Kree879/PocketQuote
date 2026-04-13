@@ -222,7 +222,7 @@ class QuoteSummaryScreen extends StatelessWidget {
                         side: BorderSide(
                           color: catInfo.glowColor.withAlpha(100),
                         ),
-                        foregroundColor: Colors.white,
+                        foregroundColor: catInfo.getDisplayColor(context),
                       ),
                     ),
                   const SizedBox(height: 16),

@@ -48,6 +48,19 @@ class TradeCategoryInfo {
     required this.quickMaterials,
   });
 
+  Color getDisplayColor(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (isDark) return glowColor;
+    
+    // For light mode, we want a darker version of the glow color for better contrast
+    // amber/orange/cyan/green accents are particularly hard to read on white
+    final hsl = HSLColor.fromColor(glowColor);
+    // Darken by 25% and increase saturation for punchiness in light mode
+    return hsl.withLightness((hsl.lightness - 0.25).clamp(0.0, 0.5))
+              .withSaturation((hsl.saturation + 0.1).clamp(0.0, 1.0))
+              .toColor();
+  }
+
   static TradeCategoryInfo fromCategory(TradeCategory category) {
     switch (category) {
       case TradeCategory.electrical:

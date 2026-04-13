@@ -28,19 +28,20 @@ class _JobCardState extends State<JobCard> {
   bool _isExpanded = false;
 
   Color _getStatusColor(QuoteStatus status) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     switch (status) {
       case QuoteStatus.sent:
-        return Colors.orangeAccent;
+        return isDark ? Colors.orangeAccent : Colors.orange.shade800;
       case QuoteStatus.approved:
       case QuoteStatus.inProgress:
-        return Colors.blueAccent;
+        return isDark ? Colors.blueAccent : Colors.blue.shade800;
       case QuoteStatus.completed:
       case QuoteStatus.invoiced:
-        return Colors.purpleAccent;
+        return isDark ? Colors.purpleAccent : Colors.purple.shade800;
       case QuoteStatus.paid:
-        return Colors.green;
+        return isDark ? Colors.green : Colors.green.shade800;
       default:
-        return Colors.white54;
+        return isDark ? Colors.white54 : Colors.grey;
     }
   }
 

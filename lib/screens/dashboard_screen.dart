@@ -48,6 +48,8 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
@@ -142,6 +144,7 @@ class DashboardScreen extends StatelessWidget {
                         itemCount: drafts.length,
                         separatorBuilder: (_, _) => const SizedBox(width: 16),
                         itemBuilder: (context, index) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
                           final draft = drafts[index];
                           final catInfo = TradeCategoryInfo.fromCategory(draft.category);
 
@@ -178,19 +181,19 @@ class DashboardScreen extends StatelessWidget {
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: Colors.orangeAccent.withAlpha(51),
+                                          color: Colors.orange.withAlpha(isDark ? 51 : 30),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
-                                        child: const Text('Draft', style: TextStyle(color: Colors.orangeAccent, fontSize: 12)),
+                                        child: Text('Draft', style: TextStyle(color: isDark ? Colors.orangeAccent : Colors.orange.shade800, fontSize: 12)),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      Icon(catInfo.icon, size: 16, color: catInfo.glowColor),
+                                      Icon(catInfo.icon, size: 16, color: catInfo.getDisplayColor(context)),
                                       const SizedBox(width: 4),
-                                      Text(catInfo.title, style: TextStyle(color: catInfo.glowColor, fontSize: 12)),
+                                      Text(catInfo.title, style: TextStyle(color: catInfo.getDisplayColor(context), fontSize: 12)),
                                       if (draft.photoPaths.isNotEmpty) ...[
                                         const SizedBox(width: 8),
                                         Icon(Icons.camera_alt, size: 14, color: Theme.of(context).textTheme.bodyMedium?.color),

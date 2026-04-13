@@ -138,6 +138,7 @@ class _BusinessScreenState extends State<BusinessScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(
       appBar: AppBar(
@@ -307,11 +308,11 @@ class _BusinessScreenState extends State<BusinessScreen> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   '• Prepare a CSV with headers: ItemName, Price, Category\n'
                   '• Valid Categories: Electrical, Plumbing, Pool, Garden, Handyman, General\n'
                   '• Items with same name & category will update the price.',
-                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                  style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
