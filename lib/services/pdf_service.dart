@@ -12,6 +12,7 @@ import '../state/quote_state.dart';
 import 'google_drive_auth_service.dart';
 import 'onedrive_service.dart';
 import 'firestore_service.dart';
+import '../models/trade_category.dart';
 
 /// Holds both generated PDF versions for a single quote.
 class GeneratedQuotes {
@@ -566,7 +567,7 @@ class PdfService {
                     children: [
                       _buildPdfRow('Materials (Supply & Installation):', materialsCombined, currencySymbol: cs),
                       pw.SizedBox(height: 2),
-                      _buildPdfRow('Labor (Installation, testing & commissioning):', laborCost, currencySymbol: cs),
+                      _buildPdfRow('Labor (${TradeCategoryInfo.fromCategory(quote.category).laborDescription}):', laborCost, currencySymbol: cs),
                       if (additionalCharges > 0) ...[
                         pw.SizedBox(height: 2),
                         _buildPdfRow('Additional Charges (Travel, call-out):', additionalCharges, currencySymbol: cs),

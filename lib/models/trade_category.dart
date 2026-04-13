@@ -32,6 +32,7 @@ class TradeCategoryInfo {
   final Color glowColor;
   final String materialLabel;
   final String materialHint;
+  final String laborDescription;
   final double defaultCallOutFee;
   final double defaultHourlyRateZar;
   final List<CommonMaterial> quickMaterials;
@@ -43,6 +44,7 @@ class TradeCategoryInfo {
     required this.glowColor,
     required this.materialLabel,
     required this.materialHint,
+    required this.laborDescription,
     required this.defaultCallOutFee,
     required this.defaultHourlyRateZar,
     required this.quickMaterials,
@@ -70,6 +72,7 @@ class TradeCategoryInfo {
           glowColor: Colors.amber,
           materialLabel: 'Consumables / Wire',
           materialHint: 'Add tape, wire nuts, cable, etc.',
+          laborDescription: 'Installation, testing & commissioning',
           defaultCallOutFee: 85.0,
           defaultHourlyRateZar: 650.0,
           quickMaterials: [
@@ -88,6 +91,7 @@ class TradeCategoryInfo {
           glowColor: Colors.blueAccent,
           materialLabel: 'Parts & Consumables',
           materialHint: 'Add pipes, fittings, solder, etc.',
+          laborDescription: 'Installation & testing',
           defaultCallOutFee: 75.0,
           defaultHourlyRateZar: 600.0,
           quickMaterials: [
@@ -106,6 +110,7 @@ class TradeCategoryInfo {
           glowColor: Colors.cyanAccent,
           materialLabel: 'Chemicals / Parts',
           materialHint: 'Add chlorine, acid, filters, etc.',
+          laborDescription: 'Service & maintenance',
           defaultCallOutFee: 50.0,
           defaultHourlyRateZar: 450.0,
           quickMaterials: [
@@ -124,6 +129,7 @@ class TradeCategoryInfo {
           glowColor: Colors.greenAccent,
           materialLabel: 'Soil / Fertilizer / Plants',
           materialHint: 'Add soils, compost, seeds, etc.',
+          laborDescription: 'Labor & clearing',
           defaultCallOutFee: 45.0,
           defaultHourlyRateZar: 350.0,
           quickMaterials: [
@@ -142,6 +148,7 @@ class TradeCategoryInfo {
           glowColor: Colors.orangeAccent,
           materialLabel: 'Hardware / Materials',
           materialHint: 'Add screws, paint, wood, etc.',
+          laborDescription: 'Installation & repairs',
           defaultCallOutFee: 65.0,
           defaultHourlyRateZar: 400.0,
           quickMaterials: [
@@ -160,6 +167,7 @@ class TradeCategoryInfo {
           glowColor: Colors.grey,
           materialLabel: 'Materials',
           materialHint: 'Add specific job materials',
+          laborDescription: 'General labor',
           defaultCallOutFee: 50.0,
           defaultHourlyRateZar: 350.0,
           quickMaterials: [
