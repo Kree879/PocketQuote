@@ -66,9 +66,9 @@ class CategoryScreen extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: info.glowColor.withAlpha(38), // 0.15 * 255
-                                    blurRadius: 20,
-                                    spreadRadius: 5,
+                                    color: info.glowColor.withAlpha(102), // 0.4 * 255 (was 15%)
+                                    blurRadius: 25,
+                                    spreadRadius: 8,
                                   ),
                                 ],
                               ),
@@ -84,8 +84,12 @@ class CategoryScreen extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: info.glowColor.withAlpha(25), // 0.1 * 255
+                                    color: info.glowColor.withAlpha(77), // 0.3 * 255 (was 10%)
                                     shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: info.getDisplayColor(context).withAlpha(80),
+                                      width: 2,
+                                    ),
                                   ),
                                   child: Icon(
                                     info.icon,
