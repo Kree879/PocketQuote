@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/quote_state.dart';
+import '../state/subscription_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/feature_gate.dart';
 import '../services/export_service.dart';
 import '../services/onedrive_service.dart';
 import 'package:intl/intl.dart';
@@ -119,6 +121,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<QuoteState>();
+    final subProvider = context.watch<SubscriptionProvider>();
     final isDark = state.isDarkMode;
     final isLoggedIn = state.currentUser != null;
 
@@ -127,6 +130,68 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Scaffold(
           appBar: AppBar(
             title: const Text('App Settings'),
+            actions: [
+              if (subProvider.isSubscribed)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accentColor.withAlpha(50),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.accentColor, width: 1),
+                      ),
+                      child: Text(
+                        'BUSINESS PLAN',
+                        style: TextStyle(
+                          color: AppTheme.accentColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'FREE PLAN', 
+                        style: TextStyle(
+                          fontSize: 10, 
+                          fontWeight: FontWeight.bold, 
+                          color: Colors.grey,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      InkWell(
+                        onTap: () => FeatureGate.showUpgradePath(context),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.star, color: Colors.amber, size: 12),
+                            const SizedBox(width: 4),
+                            Text(
+                              'UPGRADE', 
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold, 
+                                color: Colors.amber[600], 
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ),
           body: ListView(
             padding: const EdgeInsets.all(16.0),
@@ -223,18 +288,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: state.isSyncing ? null : () => _handleSyncNow(context, state),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      FeatureGate(
+                        requiresBusiness: true,
+                        child: ElevatedButton.icon(
+                          onPressed: state.isSyncing ? null : () => _handleSyncNow(context, state),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: state.isSyncing
+                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.cloud_upload_outlined),
+                          label: Text(state.isSyncing ? 'Syncing...' : 'Push All Data to Cloud'),
                         ),
-                        icon: state.isSyncing
-                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Icon(Icons.cloud_upload_outlined),
-                        label: Text(state.isSyncing ? 'Syncing...' : 'Push All Data to Cloud'),
                       ),
                       if (state.lastSyncedAt != null) ...[
                         const SizedBox(height: 8),
@@ -301,45 +369,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 16),
                     if (!state.isDriveLinked)
-                      ElevatedButton.icon(
-                        onPressed: _isConnectingDrive ? null : () => _handleDriveConnect(context, state),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.amber[700],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      FeatureGate(
+                        requiresBusiness: true,
+                        child: ElevatedButton.icon(
+                          onPressed: _isConnectingDrive ? null : () => _handleDriveConnect(context, state),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: _isConnectingDrive
+                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.login),
+                          label: const Text('Connect Google Drive'),
                         ),
-                        icon: _isConnectingDrive
-                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Icon(Icons.login),
-                        label: const Text('Connect Google Drive'),
                       )
                     else ...[
                       if (!state.isDriveAuthorized)
-                        ElevatedButton.icon(
-                          onPressed: _isConnectingDrive ? null : () => _handleDriveConnect(context, state),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        FeatureGate(
+                          requiresBusiness: true,
+                          child: ElevatedButton.icon(
+                            onPressed: _isConnectingDrive ? null : () => _handleDriveConnect(context, state),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: const Icon(Icons.vpn_key_outlined),
+                            label: const Text('Authorize Drive Access'),
                           ),
-                          icon: const Icon(Icons.vpn_key_outlined),
-                          label: const Text('Authorize Drive Access'),
                         )
                       else
-                        ElevatedButton.icon(
-                          onPressed: _isVerifyingDrive ? null : () => _handleDriveVerify(context, state),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[700],
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        FeatureGate(
+                          requiresBusiness: true,
+                          child: ElevatedButton.icon(
+                            onPressed: _isVerifyingDrive ? null : () => _handleDriveVerify(context, state),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[700],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            icon: _isVerifyingDrive
+                                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Icon(Icons.check_circle_outline),
+                            label: const Text('Verify Backup Folder'),
                           ),
-                          icon: _isVerifyingDrive
-                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Icon(Icons.check_circle_outline),
-                          label: const Text('Verify Backup Folder'),
                         ),
                     ],
                   ],
@@ -398,71 +475,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 16),
                     if (!state.isOneDriveLinked)
-                      ElevatedButton.icon(
-                        onPressed: _isConnectingDrive ? null : () async {
-                          setState(() => _isConnectingDrive = true);
-                          final error = await state.linkOneDrive();
-                          setState(() => _isConnectingDrive = false);
-                          if (error != null && mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to connect: $error'), backgroundColor: Colors.redAccent),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue[700],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: _isConnectingDrive
-                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Icon(Icons.window), // Windows logo approx
-                        label: const Text('Connect OneDrive'),
-                      )
-                    else 
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          setState(() => _isVerifyingDrive = true);
-                          final folderId = await OneDriveAuthService.instance.createBackupFolder();
-                          setState(() => _isVerifyingDrive = false);
-                          if (context.mounted) {
-                            if (folderId != null) {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('OneDrive Verified'),
-                                  content: Text('Backup folder found/created!\n\nFolder ID: $folderId'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-                                  ],
-                                ),
-                              );
-                            } else {
-                              final errorMsg = OneDriveAuthService.instance.lastError ?? 'Unknown error';
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('OneDrive Error'),
-                                  content: SelectableText('Could not verify backup folder.\n\nError: $errorMsg'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
-                                  ],
-                                ),
+                      FeatureGate(
+                        requiresBusiness: true,
+                        child: ElevatedButton.icon(
+                          onPressed: _isConnectingDrive ? null : () async {
+                            setState(() => _isConnectingDrive = true);
+                            final error = await state.linkOneDrive();
+                            setState(() => _isConnectingDrive = false);
+                            if (error != null && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to connect: $error'), backgroundColor: Colors.redAccent),
                               );
                             }
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: _isConnectingDrive
+                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.window), // Windows logo approx
+                          label: const Text('Connect OneDrive'),
                         ),
-                        icon: _isVerifyingDrive
-                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Icon(Icons.check_circle_outline),
-                        label: const Text('Verify Backup Folder'),
+                      )
+                    else 
+                      FeatureGate(
+                        requiresBusiness: true,
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            setState(() => _isVerifyingDrive = true);
+                            final folderId = await OneDriveAuthService.instance.createBackupFolder();
+                            setState(() => _isVerifyingDrive = false);
+                            if (context.mounted) {
+                              if (folderId != null) {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('OneDrive Verified'),
+                                    content: Text('Backup folder found/created!\n\nFolder ID: $folderId'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+                                    ],
+                                  ),
+                                );
+                              } else {
+                                final errorMsg = OneDriveAuthService.instance.lastError ?? 'Unknown error';
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('OneDrive Error'),
+                                    content: SelectableText('Could not verify backup folder.\n\nError: $errorMsg'),
+                                    actions: [
+                                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+                                    ],
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[700],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: _isVerifyingDrive
+                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.check_circle_outline),
+                          label: const Text('Verify Backup Folder'),
+                        ),
                       ),
                   ],
                 ),
@@ -508,18 +591,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _isExporting ? null : () => _handleExport(context, state.currentUser!.uid),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      FeatureGate(
+                        requiresBusiness: true,
+                        child: ElevatedButton.icon(
+                          onPressed: _isExporting ? null : () => _handleExport(context, state.currentUser!.uid),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: _isExporting
+                              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.download_outlined),
+                          label: Text(_isExporting ? 'Exporting...' : 'Export All Data (.csv)'),
                         ),
-                        icon: _isExporting
-                            ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Icon(Icons.download_outlined),
-                        label: Text(_isExporting ? 'Exporting...' : 'Export All Data (.csv)'),
                       ),
                     ],
                   ),

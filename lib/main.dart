@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 import 'state/quote_state.dart';
+import 'state/subscription_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'models/quote_model.dart';
@@ -38,6 +39,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => QuoteState()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
       child: const QuickQuoteApp(),
     ),

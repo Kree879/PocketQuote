@@ -37,8 +37,8 @@ android {
         applicationId = "com.kree8designs.pocketquote"
         minSdk = 24
         targetSdk = 35
-        versionCode = 6
-        versionName = "6.0.0"
+        versionCode = 8
+        versionName = "8.0.0"
     }
 
     signingConfigs {

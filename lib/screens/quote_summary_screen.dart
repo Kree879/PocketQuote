@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/quote_state.dart';
+import '../state/subscription_provider.dart';
 import '../models/trade_category.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/feature_gate.dart';
 import '../services/pdf_service.dart';
 import '../models/quote_model.dart';
 
@@ -45,6 +47,9 @@ class QuoteSummaryScreen extends StatelessWidget {
     await state.markAsSent();
 
     if (context.mounted) {
+      final subProvider = context.read<SubscriptionProvider>();
+      await subProvider.incrementQuoteCount();
+      
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Quote sent successfully!')));
@@ -61,11 +66,14 @@ class QuoteSummaryScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: SafeArea(
-        child: Consumer<QuoteState>(
-          builder: (context, state, child) {
+        child: Consumer2<QuoteState, SubscriptionProvider>(
+          builder: (context, state, subProvider, child) {
             final catInfo = TradeCategoryInfo.fromCategory(
               state.selectedCategory,
             );
+            
+            final bool showLockedPdf = !subProvider.isSubscribed && !subProvider.canGenerateFreeQuote;
+
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -176,53 +184,56 @@ class QuoteSummaryScreen extends StatelessWidget {
                   ),
                   const Spacer(),
                   ElevatedButton.icon(
-                    onPressed: () => _generateAndSharePDF(context, state),
-                    icon: const Icon(Icons.picture_as_pdf),
-                    label: const Text('Generate PDF & Share'),
+                    onPressed: showLockedPdf ? () => FeatureGate.showUpgradePath(context) : () => _generateAndSharePDF(context, state),
+                    icon: Icon(showLockedPdf ? Icons.lock : Icons.picture_as_pdf),
+                    label: Text(showLockedPdf ? 'Upgrade to Generate PDF (Limit Reached)' : 'Generate PDF & Share'),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: catInfo.glowColor,
+                      backgroundColor: showLockedPdf ? Colors.blueGrey : catInfo.glowColor,
+                      foregroundColor: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 12),
                   if (state.isDriveLinked)
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final quote = QuoteModel(
-                          id: state.currentQuoteId ?? '',
-                          clientName: state.clientName,
-                          status: state.currentStatus,
-                          lastModified: DateTime.now(),
-                          category: state.selectedCategory,
-                          useCallOutFee: state.useCallOutFee,
-                          callOutFeeAmount: state.callOutFeeAmount,
-                          hourlyRate: state.hourlyRate,
-                          estimatedHours: state.estimatedHours,
-                          travelCostPerKm: state.travelCostPerKm,
-                          travelDistanceKm: state.travelDistanceKm,
-                          flatTravelFee: state.flatTravelFee,
-                          useFlatTravelFee: state.useFlatTravelFee,
-                          materials: state.materials,
-                          markupPercentage: state.markupPercentage,
-                          totalCostCached: state.totalCost,
-                          photoPaths: state.photoPaths,
-                          projectTitle: state.projectTitle,
-                        );
-                        await PdfService.saveQuotePdfToDrive(
-                          context: context,
-                          quote: quote,
-                          globalState: state,
-                        );
-                      },
-                      icon: const Icon(Icons.cloud_upload_outlined),
-                      label: const Text('Save to Drive'),
-
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(
-                          color: catInfo.glowColor.withAlpha(100),
+                    FeatureGate(
+                      requiresBusiness: true,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final quote = QuoteModel(
+                            id: state.currentQuoteId ?? '',
+                            clientName: state.clientName,
+                            status: state.currentStatus,
+                            lastModified: DateTime.now(),
+                            category: state.selectedCategory,
+                            useCallOutFee: state.useCallOutFee,
+                            callOutFeeAmount: state.callOutFeeAmount,
+                            hourlyRate: state.hourlyRate,
+                            estimatedHours: state.estimatedHours,
+                            travelCostPerKm: state.travelCostPerKm,
+                            travelDistanceKm: state.travelDistanceKm,
+                            flatTravelFee: state.flatTravelFee,
+                            useFlatTravelFee: state.useFlatTravelFee,
+                            materials: state.materials,
+                            markupPercentage: state.markupPercentage,
+                            totalCostCached: state.totalCost,
+                            photoPaths: state.photoPaths,
+                            projectTitle: state.projectTitle,
+                          );
+                          await PdfService.saveQuotePdfToDrive(
+                            context: context,
+                            quote: quote,
+                            globalState: state,
+                          );
+                        },
+                        icon: const Icon(Icons.cloud_upload_outlined),
+                        label: const Text('Save to Drive'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(
+                            color: catInfo.glowColor.withAlpha(100),
+                          ),
+                          foregroundColor: catInfo.getDisplayColor(context),
                         ),
-                        foregroundColor: catInfo.getDisplayColor(context),
                       ),
                     ),
                   const SizedBox(height: 16),
