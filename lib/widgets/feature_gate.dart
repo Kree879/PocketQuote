@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/subscription_provider.dart';
-
+import '../screens/subscription_screen.dart';
 class FeatureGate extends StatelessWidget {
   final Widget child;
   final bool requiresBusiness;
@@ -17,14 +17,10 @@ class FeatureGate extends StatelessWidget {
   });
 
   static void showUpgradePath(BuildContext context) {
-    // TODO: REVERT AFTER CLOSED TESTING
-    return;
-    /*
     Navigator.push(
       context, 
       MaterialPageRoute(builder: (_) => const SubscriptionScreen())
     );
-    */
   }
 
   @override

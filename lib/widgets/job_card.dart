@@ -7,6 +7,7 @@ import '../state/quote_state.dart';
 import '../theme/app_theme.dart';
 import '../screens/costing_screen.dart';
 import '../services/pdf_service.dart';
+import 'receipt_scanner_sheet.dart';
 
 class JobCard extends StatefulWidget {
   final QuoteModel quote;
@@ -310,6 +311,43 @@ class _JobCardState extends State<JobCard> {
                           ),
                           const SizedBox(height: 12),
                         ],
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentColor,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          icon: const Icon(Icons.receipt_long),
+                          label: const Text(
+                            'Add Expense / Receipt',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context); // Close details modal
+                            final projectId = q.firestoreId ?? q.id;
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).scaffoldBackgroundColor,
+                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                child: SafeArea(
+                                  child: ReceiptScannerSheet(projectId: projectId),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 12),
                         ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor:

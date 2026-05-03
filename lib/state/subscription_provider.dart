@@ -21,16 +21,14 @@ class SubscriptionProvider extends ChangeNotifier {
     _initialize();
   }
 
-  // TODO: REVERT AFTER CLOSED TESTING
-  bool get isSubscribed => true; // _isSubscribed;
+  bool get isSubscribed => true; // Temporarily unlocked for testing
   bool get isLoading => _isLoading;
   int get quoteCount => _quoteCount;
   bool get isStoreAvailable => _isStoreAvailable;
   List<ProductDetails> get products => _products;
 
   // The Free Tier limit is 2 generated quotes
-  // TODO: REVERT AFTER CLOSED TESTING
-  bool get canGenerateFreeQuote => true; // _quoteCount < 2;
+  bool get canGenerateFreeQuote => true; // Temporarily unlocked for testing
 
   Future<void> _initialize() async {
     _isLoading = true;
