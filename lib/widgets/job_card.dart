@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
@@ -8,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../screens/costing_screen.dart';
 import '../services/pdf_service.dart';
 import 'receipt_scanner_sheet.dart';
+import 'expense_list.dart';
 
 class JobCard extends StatefulWidget {
   final QuoteModel quote;
@@ -251,6 +253,18 @@ class _JobCardState extends State<JobCard> {
                               'Markup (${q.markupPercentage}%)',
                               materialMarkupCost,
                             ),
+
+                          const SizedBox(height: 24),
+                          Text(
+                            'RECENT RECEIPTS & EXPENSES',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          ExpenseList(
+                            projectId: q.firestoreId ?? q.id,
+                            currencySymbol: context.read<QuoteState>().currencySymbol,
+                          ),
 
                           const SizedBox(height: 40),
                         ],

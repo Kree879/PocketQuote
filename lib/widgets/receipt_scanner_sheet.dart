@@ -90,7 +90,20 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
       _currentState = ScannerState.loading;
     });
 
-    final data = await service.extractReceiptData(image);
+    Map<String, dynamic>? data;
+    try {
+      data = await service.extractReceiptData(image);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _currentState = ScannerState.form;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AI took too long to respond. Please enter details manually.')),
+        );
+      }
+      return;
+    }
     
     if (mounted) {
       if (data != null) {
@@ -161,8 +174,32 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
         setState(() {
           _currentState = ScannerState.form;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save expense: $e'), backgroundColor: Colors.redAccent),
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            title: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.redAccent),
+                const SizedBox(width: 8),
+                const Text('Save Failed'),
+              ],
+            ),
+            content: Text(
+              e.toString().contains('image_upload_failed')
+                  ? 'Failed to upload receipt image. Please check your connection and try again.'
+                  : e.toString().contains('permission-denied') 
+                      ? 'You do not have permission to save this receipt. Please ensure you are logged in and authorized for this project.' 
+                      : 'An error occurred while saving: $e'
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
         );
       }
     }

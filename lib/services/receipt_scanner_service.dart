@@ -24,7 +24,8 @@ class ReceiptScannerService {
   Future<File?> pickReceiptImage({ImageSource source = ImageSource.camera}) async {
     final XFile? image = await _imagePicker.pickImage(
       source: source,
-      imageQuality: 80, // slight compression
+      maxWidth: 1024,
+      imageQuality: 85, // compression with max width
     );
     if (image != null) {
       return File(image.path);
@@ -52,7 +53,7 @@ class ReceiptScannerService {
     try {
       final response = await model.generateContent([
         Content.multi([prompt, imagePart])
-      ]);
+      ]).timeout(const Duration(seconds: 30));
 
       if (response.text != null) {
         String jsonText = response.text!.trim();
@@ -70,7 +71,7 @@ class ReceiptScannerService {
       }
     } catch (e) {
       print('Error extracting receipt data: $e');
-      return null;
+      rethrow;
     }
     return null;
   }
@@ -94,23 +95,44 @@ class ReceiptScannerService {
           .child('receipts')
           .child(fileName);
       
-      final uploadTask = await ref.putFile(imageFile);
-      imageUrl = await uploadTask.ref.getDownloadURL();
+      try {
+        final snapshot = await ref.putFile(imageFile);
+        if (snapshot.state == TaskState.success) {
+          imageUrl = await snapshot.ref.getDownloadURL();
+        } else {
+          throw Exception('image_upload_failed');
+        }
+      } catch (e) {
+        print('Firebase storage error: $e');
+        throw Exception('image_upload_failed');
+      }
+    }
+
+    DateTime parsedDate;
+    try {
+      parsedDate = DateTime.parse(date);
+    } catch (_) {
+      parsedDate = DateTime.now();
     }
 
     final receiptData = {
-      'vendor': vendor,
-      'date': date,
-      'amount': amount,
+      'vendorName': vendor,
+      'date': Timestamp.fromDate(parsedDate),
+      'totalAmount': amount,
       'category': category,
       'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
     };
 
-    await FirebaseFirestore.instance
-        .collection('projects')
-        .doc(projectId)
-        .collection('receipts')
-        .add(receiptData);
+    try {
+      await FirebaseFirestore.instance
+          .collection('projects')
+          .doc(projectId)
+          .collection('receipts')
+          .add(receiptData);
+    } catch (e) {
+      print('Firebase save error: $e');
+      rethrow;
+    }
   }
 }
