@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,7 +23,7 @@ class ReceiptScannerService {
     _geminiApiKey = apiKey;
   }
 
-  Future<File?> pickReceiptImage({ImageSource source = ImageSource.camera}) async {
+  Future<File?> pickReceiptImage({required ImageSource source}) async {
     final XFile? image = await _imagePicker.pickImage(
       source: source,
       maxWidth: 1024,
@@ -77,23 +79,28 @@ class ReceiptScannerService {
   }
 
   Future<void> saveReceiptToFirebase({
-    required String projectId,
+    required String quoteId,
     required String vendor,
     required String date,
     required double amount,
     required String category,
     File? imageFile,
   }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw Exception('User is not logged in.');
+    }
+    final userId = user.uid;
+    debugPrint('ReceiptScannerService: saveReceiptToFirebase for userId: $userId to path: users/$userId/projects/$quoteId/receipts');
+
     String? imageUrl;
     
     if (imageFile != null) {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_receipt.jpg';
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('projects')
-          .child(projectId)
-          .child('receipts')
-          .child(fileName);
+      final uploadPath = 'users/$userId/projects/$quoteId/receipts/$fileName';
+      debugPrint('ReceiptScannerService: Starting upload to path: $uploadPath');
+      
+      final ref = FirebaseStorage.instance.ref().child(uploadPath);
       
       try {
         final snapshot = await ref.putFile(imageFile);
@@ -102,8 +109,11 @@ class ReceiptScannerService {
         } else {
           throw Exception('image_upload_failed');
         }
+      } on FirebaseException catch (e) {
+        debugPrint('Firebase Storage Error [${e.code}]: ${e.message}');
+        rethrow; // Rethrow to allow UI to handle specific codes like 'permission-denied'
       } catch (e) {
-        print('Firebase storage error: $e');
+        debugPrint('General storage error: $e');
         throw Exception('image_upload_failed');
       }
     }
@@ -126,12 +136,17 @@ class ReceiptScannerService {
 
     try {
       await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
           .collection('projects')
-          .doc(projectId)
+          .doc(quoteId)
           .collection('receipts')
           .add(receiptData);
+    } on FirebaseException catch (e) {
+      debugPrint('Firebase Firestore Error [${e.code}]: ${e.message}');
+      rethrow;
     } catch (e) {
-      print('Firebase save error: $e');
+      debugPrint('Firebase save error: $e');
       rethrow;
     }
   }

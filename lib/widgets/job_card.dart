@@ -262,7 +262,7 @@ class _JobCardState extends State<JobCard> {
                           ),
                           const SizedBox(height: 8),
                           ExpenseList(
-                            projectId: q.firestoreId ?? q.id,
+                            quoteId: q.firestoreId ?? q.id,
                             currencySymbol: context.read<QuoteState>().currencySymbol,
                           ),
 
@@ -344,7 +344,7 @@ class _JobCardState extends State<JobCard> {
                           ),
                           onPressed: () {
                             Navigator.pop(context); // Close details modal
-                            final projectId = q.firestoreId ?? q.id;
+                            final quoteId = q.firestoreId ?? q.id;
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -355,7 +355,7 @@ class _JobCardState extends State<JobCard> {
                                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                                 ),
                                 child: SafeArea(
-                                  child: ReceiptScannerSheet(projectId: projectId),
+                                  child: ReceiptScannerSheet(quoteId: quoteId),
                                 ),
                               ),
                             );

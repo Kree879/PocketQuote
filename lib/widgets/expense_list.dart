@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:intl/intl.dart';
 
 class ExpenseList extends StatelessWidget {
-  final String projectId;
+  final String quoteId;
   final String currencySymbol;
 
   const ExpenseList({
     super.key,
-    required this.projectId,
+    required this.quoteId,
     required this.currencySymbol,
   });
 
   Future<void> _deleteExpense(BuildContext context, String docId, String? imageUrl) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not logged in'), backgroundColor: Colors.redAccent),
+        );
+      }
+      return;
+    }
+
     try {
       // If there's an image, delete it from storage
       if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -23,8 +34,10 @@ class ExpenseList extends StatelessWidget {
       
       // Delete document from Firestore
       await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('projects')
-          .doc(projectId)
+          .doc(quoteId)
           .collection('receipts')
           .doc(docId)
           .delete();
@@ -78,10 +91,20 @@ class ExpenseList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return const Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Center(child: Text('User not logged in.')),
+      );
+    }
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
           .collection('projects')
-          .doc(projectId)
+          .doc(quoteId)
           .collection('receipts')
           .orderBy('date', descending: true)
           .snapshots(),

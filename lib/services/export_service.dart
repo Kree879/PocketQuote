@@ -47,7 +47,7 @@ class ExportService {
     final quotesSnap = await _db
         .collection('users')
         .doc(userId)
-        .collection('quotes')
+        .collection('projects')
         .orderBy('lastModified', descending: false)
         .get();
 

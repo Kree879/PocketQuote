@@ -20,7 +20,7 @@ class FirestoreService {
   // Sync a quote to Firestore
   Future<void> uploadQuote(String userId, QuoteModel quote) async {
     try {
-      final docRef = _db.collection('users').doc(userId).collection('quotes');
+      final docRef = _db.collection('users').doc(userId).collection('projects');
       
       // Use the local UUID as the document ID for robust two-way syncing
       await docRef.doc(quote.id).set(quote.toJson());
@@ -33,10 +33,11 @@ class FirestoreService {
 
   // Get quote history for a user
   Stream<List<QuoteModel>> getQuoteHistory(String userId) {
+    debugPrint('FirestoreService: getQuoteHistory for userId: $userId from path: users/$userId/projects');
     return _db
         .collection('users')
         .doc(userId)
-        .collection('quotes')
+        .collection('projects')
         .orderBy('lastModified', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
@@ -117,7 +118,7 @@ class FirestoreService {
       int operationCount = 0;
 
       // 2. Add Quotes to batch
-      final quotesRef = _db.collection('users').doc(userId).collection('quotes');
+      final quotesRef = _db.collection('users').doc(userId).collection('projects');
       for (var quote in quotes) {
         if (operationCount >= 490) { // Leave room for other ops
           await batch.commit();
@@ -164,7 +165,7 @@ class FirestoreService {
       await _db
           .collection('users')
           .doc(userId)
-          .collection('quotes')
+          .collection('projects')
           .doc(firestoreId)
           .delete();
     } catch (e) {

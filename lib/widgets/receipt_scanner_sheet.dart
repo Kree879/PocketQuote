@@ -4,14 +4,15 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../services/receipt_scanner_service.dart';
+import '../widgets/glass_container.dart';
 import '../theme/app_theme.dart';
 
 enum ScannerState { initial, loading, form }
 
 class ReceiptScannerSheet extends StatefulWidget {
-  final String projectId;
+  final String quoteId;
 
-  const ReceiptScannerSheet({super.key, required this.projectId});
+  const ReceiptScannerSheet({super.key, required this.quoteId});
 
   @override
   State<ReceiptScannerSheet> createState() => _ReceiptScannerSheetState();
@@ -80,8 +81,11 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
   }
 
   Future<void> _handleScanReceipt() async {
+    final source = await _showImageSourceDialog();
+    if (source == null) return;
+
     final service = ReceiptScannerService.instance;
-    final image = await service.pickReceiptImage();
+    final image = await service.pickReceiptImage(source: source);
     
     if (image == null) return; // User canceled
 
@@ -128,13 +132,72 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
   }
 
   Future<void> _pickImageForManual() async {
+    final source = await _showImageSourceDialog();
+    if (source == null) return;
+
     final service = ReceiptScannerService.instance;
-    final image = await service.pickReceiptImage();
+    final image = await service.pickReceiptImage(source: source);
     if (image != null) {
       setState(() {
         _receiptImage = image;
       });
     }
+  }
+
+  Future<ImageSource?> _showImageSourceDialog() async {
+    return await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GlassContainer(
+        borderRadius: 24,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Select Receipt Source', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildSourceOption(
+                  context,
+                  icon: Icons.camera_alt,
+                  label: 'Camera',
+                  onTap: () => Navigator.pop(context, ImageSource.camera),
+                ),
+                _buildSourceOption(
+                  context,
+                  icon: Icons.photo_library,
+                  label: 'Gallery (Photo Picker)',
+                  onTap: () => Navigator.pop(context, ImageSource.gallery),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceOption(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppTheme.accentColor, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
   }
 
   Future<void> _submitForm() async {
@@ -153,7 +216,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     try {
       final amount = double.tryParse(_amountController.text) ?? 0.0;
       await ReceiptScannerService.instance.saveReceiptToFirebase(
-        projectId: widget.projectId,
+        quoteId: widget.quoteId,
         vendor: _vendorController.text.trim(),
         date: _dateController.text.trim(),
         amount: amount,

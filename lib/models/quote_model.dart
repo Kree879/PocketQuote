@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hive/hive.dart';
 import 'material_item.dart';
 import 'trade_category.dart';
@@ -128,7 +129,9 @@ class QuoteModel {
       status: QuoteStatus.values.firstWhere(
           (e) => e.name == (json['status'] as String?), 
           orElse: () => QuoteStatus.draft),
-      lastModified: DateTime.parse(json['lastModified'] as String? ?? DateTime.now().toIso8601String()),
+      lastModified: json['lastModified'] is Timestamp 
+          ? (json['lastModified'] as Timestamp).toDate() 
+          : DateTime.parse(json['lastModified'] as String? ?? DateTime.now().toIso8601String()),
       category: TradeCategory.values.firstWhere(
           (e) => e.name == (json['category'] as String?), 
           orElse: () => TradeCategory.general),
