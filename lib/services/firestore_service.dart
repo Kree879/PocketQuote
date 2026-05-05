@@ -20,7 +20,7 @@ class FirestoreService {
   // Sync a quote to Firestore
   Future<void> uploadQuote(String userId, QuoteModel quote) async {
     try {
-      final docRef = _db.collection('users').doc(userId).collection('projects');
+      final docRef = _db.collection('users').doc(userId).collection('quotes');
       
       // Use the local UUID as the document ID for robust two-way syncing
       await docRef.doc(quote.id).set(quote.toJson());
@@ -33,11 +33,11 @@ class FirestoreService {
 
   // Get quote history for a user
   Stream<List<QuoteModel>> getQuoteHistory(String userId) {
-    debugPrint('FirestoreService: getQuoteHistory for userId: $userId from path: users/$userId/projects');
+    debugPrint('FirestoreService: getQuoteHistory for userId: $userId from path: users/$userId/quotes');
     return _db
         .collection('users')
         .doc(userId)
-        .collection('projects')
+        .collection('quotes')
         .orderBy('lastModified', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs.map((doc) {
@@ -118,7 +118,7 @@ class FirestoreService {
       int operationCount = 0;
 
       // 2. Add Quotes to batch
-      final quotesRef = _db.collection('users').doc(userId).collection('projects');
+      final quotesRef = _db.collection('users').doc(userId).collection('quotes');
       for (var quote in quotes) {
         if (operationCount >= 490) { // Leave room for other ops
           await batch.commit();
@@ -159,15 +159,22 @@ class FirestoreService {
     return {'success': 0, 'failed': 0};
   }
 
-  // Delete a quote from Firestore
+  // Delete a quote from Firestore recursively (including sub-collections)
   Future<void> deleteQuote(String userId, String firestoreId) async {
     try {
-      await _db
-          .collection('users')
-          .doc(userId)
-          .collection('projects')
-          .doc(firestoreId)
-          .delete();
+      final quoteRef = _db.collection('users').doc(userId).collection('quotes').doc(firestoreId);
+      
+      // Recursive Delete: Clean up all receipts in the sub-collection first
+      final receiptsSnap = await quoteRef.collection('receipts').get();
+      final batch = _db.batch();
+      for (var doc in receiptsSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Delete the main quote document
+      batch.delete(quoteRef);
+      
+      await batch.commit();
     } catch (e) {
       debugPrint('Firestore delete error: $e');
       rethrow;

@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:image_picker/image_picker.dart';
+import '../config/api_keys.dart';
 
 class ReceiptScannerService {
   static final ReceiptScannerService instance = ReceiptScannerService._internal();
@@ -36,44 +37,70 @@ class ReceiptScannerService {
   }
 
   Future<Map<String, dynamic>?> extractReceiptData(File imageFile) async {
-    if (_geminiApiKey == null || _geminiApiKey!.isEmpty) {
+    final apiKey = _geminiApiKey ?? ApiKeys.geminiApiKey;
+    if (apiKey.isEmpty) {
       throw Exception('Gemini API Key is not set.');
     }
 
     final model = GenerativeModel(
-      model: 'gemini-1.5-flash',
-      apiKey: _geminiApiKey!,
+      model: 'gemini-2.5-flash',
+      apiKey: apiKey,
+      generationConfig: GenerationConfig(responseMimeType: 'application/json'),
     );
 
     // AI Prompting: We instruct the model to specifically look for three distinct fields.
     // Specifying the exact return format (ONLY a valid JSON object) ensures that the output
     // can be reliably parsed using jsonDecode without string manipulation errors.
-    final prompt = TextPart('Extract the Vendor Name, Date (formatted as YYYY-MM-DD), and Total Amount (as a raw number without currency symbols) from this receipt. Return ONLY a valid JSON object with keys "vendor", "date", and "amount".');
+    // AI Prompting: Analyze receipt and return structured JSON with items array.
+    final prompt = TextPart("Analyze this receipt and return a JSON object with the keys: 'merchantName', 'date', 'totalAmount', and 'items'. The 'items' key must be an array of objects, each with 'description', 'quantity', and 'price'.");
     final imageBytes = await imageFile.readAsBytes();
     final imagePart = DataPart('image/jpeg', imageBytes);
 
-    try {
-      final response = await model.generateContent([
-        Content.multi([prompt, imagePart])
-      ]).timeout(const Duration(seconds: 30));
+    int retryCount = 0;
+    const int maxRetries = 1; // Try once, then retry once more
 
-      if (response.text != null) {
-        String jsonText = response.text!.trim();
-        // Sometimes the model wraps in ```json ... ```
-        if (jsonText.startsWith('```json')) {
-          jsonText = jsonText.replaceAll('```json', '');
+    while (true) {
+      try {
+        final response = await model.generateContent([
+          Content.multi([prompt, imagePart])
+        ]).timeout(const Duration(seconds: 30));
+
+        if (response.text != null) {
+          // AI Debugging: Log success and raw response to troubleshoot parsing issues
+          debugPrint('Gemini Response: 200 OK');
+          debugPrint('Gemini Raw Response: ${response.text}');
+
+          String jsonText = response.text!.trim();
+          
+          // Harden JSON Parsing: Remove Markdown formatting if present
+          jsonText = jsonText
+              .replaceAll('```json', '')
+              .replaceAll('```', '')
+              .trim();
+          
+          try {
+            final data = jsonDecode(jsonText) as Map<String, dynamic>;
+            debugPrint('Gemini Parsed Data: $data');
+            return data;
+          } catch (e) {
+            debugPrint('JSON Parsing Error: $e. Content: $jsonText');
+            throw Exception('Failed to parse AI response. The receipt might be too complex or blurry.');
+          }
         }
-        if (jsonText.startsWith('```')) {
-           jsonText = jsonText.replaceAll('```', '');
+        break; // Exit loop if text is null (shouldn't happen with success)
+      } catch (e) {
+        final errorStr = e.toString().toLowerCase();
+        // Check for 503 (Service Unavailable) or "overloaded" which are typical for busy servers
+        if ((errorStr.contains('503') || errorStr.contains('service unavailable') || errorStr.contains('overloaded')) && retryCount < maxRetries) {
+          retryCount++;
+          debugPrint('Gemini Service Busy (503). Retry attempt $retryCount of $maxRetries in 1 second...');
+          await Future.delayed(const Duration(seconds: 1));
+          continue; // Retry the loop
         }
-        jsonText = jsonText.trim();
         
-        final data = jsonDecode(jsonText) as Map<String, dynamic>;
-        return data;
+        debugPrint('Error extracting receipt data: $e');
+        rethrow;
       }
-    } catch (e) {
-      print('Error extracting receipt data: $e');
-      rethrow;
     }
     return null;
   }
@@ -84,6 +111,7 @@ class ReceiptScannerService {
     required String date,
     required double amount,
     required String category,
+    List<dynamic>? items,
     File? imageFile,
   }) async {
     final user = FirebaseAuth.instance.currentUser;
@@ -91,13 +119,13 @@ class ReceiptScannerService {
       throw Exception('User is not logged in.');
     }
     final userId = user.uid;
-    debugPrint('ReceiptScannerService: saveReceiptToFirebase for userId: $userId to path: users/$userId/projects/$quoteId/receipts');
+    debugPrint('ReceiptScannerService: saveReceiptToFirebase for userId: $userId to Firestore and Storage path: users/$userId/quotes/$quoteId/receipts');
 
     String? imageUrl;
     
     if (imageFile != null) {
       final fileName = '${DateTime.now().millisecondsSinceEpoch}_receipt.jpg';
-      final uploadPath = 'users/$userId/projects/$quoteId/receipts/$fileName';
+      final uploadPath = 'users/$userId/quotes/$quoteId/receipts/$fileName';
       debugPrint('ReceiptScannerService: Starting upload to path: $uploadPath');
       
       final ref = FirebaseStorage.instance.ref().child(uploadPath);
@@ -126,10 +154,11 @@ class ReceiptScannerService {
     }
 
     final receiptData = {
-      'vendorName': vendor,
+      'vendorName': vendor, // Maps to 'merchantName' from Gemini in UI
       'date': Timestamp.fromDate(parsedDate),
       'totalAmount': amount,
       'category': category,
+      'items': items ?? [],
       'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -138,7 +167,7 @@ class ReceiptScannerService {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
-          .collection('projects')
+          .collection('quotes')
           .doc(quoteId)
           .collection('receipts')
           .add(receiptData);

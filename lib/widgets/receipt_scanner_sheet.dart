@@ -7,19 +7,31 @@ import '../services/receipt_scanner_service.dart';
 import '../widgets/glass_container.dart';
 import '../theme/app_theme.dart';
 
-enum ScannerState { initial, loading, form }
+
 
 class ReceiptScannerSheet extends StatefulWidget {
   final String quoteId;
+  final Map<String, dynamic>? initialData;
+  final File? initialImage;
+  final bool autoScan;
+  final bool manualMode;
 
-  const ReceiptScannerSheet({super.key, required this.quoteId});
+  const ReceiptScannerSheet({
+    super.key, 
+    required this.quoteId,
+    this.initialData,
+    this.initialImage,
+    this.autoScan = false,
+    this.manualMode = false,
+  });
 
   @override
   State<ReceiptScannerSheet> createState() => _ReceiptScannerSheetState();
 }
 
 class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
-  ScannerState _currentState = ScannerState.initial;
+  bool _showForm = false;
+  bool _isScanning = false;
   
   final _formKey = GlobalKey<FormState>();
   final _vendorController = TextEditingController();
@@ -28,6 +40,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
   
   String? _selectedCategory;
   File? _receiptImage;
+  List<dynamic>? _extractedItems;
   
   final List<String> _defaultCategories = [
     'Materials', 'Labor', 'Fuel', 'Tools', 'Subcontractor', 'Other'
@@ -39,6 +52,29 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     super.initState();
     _dateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _loadRecentCategories();
+
+    if (widget.initialData != null || widget.initialImage != null) {
+      _receiptImage = widget.initialImage;
+      if (widget.initialData != null) {
+        final data = widget.initialData!;
+        // Harden Field Mapping: Handle various potential keys from AI results
+        _vendorController.text = (data['merchantName'] ?? data['vendorName'] ?? data['vendor'] ?? data['merchant'] ?? '')?.toString() ?? '';
+        _dateController.text = data['date']?.toString() ?? _dateController.text;
+        _amountController.text = (data['totalAmount'] ?? data['amount'] ?? data['total'] ?? '')?.toString() ?? '';
+        _extractedItems = data['items'] as List<dynamic>?;
+      }
+      _showForm = true;
+    }
+
+    if (widget.autoScan) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _takePhotoAndProcess();
+      });
+    } else if (widget.manualMode) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleManualEntry();
+      });
+    }
   }
 
   @override
@@ -80,7 +116,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     });
   }
 
-  Future<void> _handleScanReceipt() async {
+  Future<void> _takePhotoAndProcess() async {
     final source = await _showImageSourceDialog();
     if (source == null) return;
 
@@ -91,43 +127,63 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
 
     setState(() {
       _receiptImage = image;
-      _currentState = ScannerState.loading;
+      _isScanning = true;
     });
 
-    Map<String, dynamic>? data;
     try {
-      data = await service.extractReceiptData(image);
+      final data = await service.extractReceiptData(image);
+      
+      if (mounted) {
+        if (data != null) {
+          // Harden Field Mapping: Priority mapping for AI extracted fields
+          _vendorController.text = (data['merchantName'] ?? data['vendorName'] ?? data['vendor'] ?? data['merchant'] ?? '')?.toString() ?? '';
+          _dateController.text = data['date']?.toString() ?? _dateController.text;
+          _amountController.text = (data['totalAmount'] ?? data['amount'] ?? data['total'] ?? '')?.toString() ?? '';
+          _extractedItems = data['items'] as List<dynamic>?;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('AI returned empty data. Please enter details manually.'),
+              backgroundColor: Colors.orangeAccent,
+            ),
+          );
+        }
+        setState(() {
+          _isScanning = false;
+          _showForm = true;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _currentState = ScannerState.form;
+          _isScanning = false;
+          _showForm = true; // Transition to form for manual entry anyway
         });
+        
+        // Visible Error Feedback: Inform user why AI failed
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('AI took too long to respond. Please enter details manually.')),
+          SnackBar(
+            content: Text('AI Extraction Error: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(label: 'MANUAL', textColor: Colors.white, onPressed: () {}),
+          ),
         );
       }
-      return;
-    }
-    
-    if (mounted) {
-      if (data != null) {
-        _vendorController.text = data['vendor']?.toString() ?? '';
-        _dateController.text = data['date']?.toString() ?? _dateController.text;
-        _amountController.text = data['amount']?.toString() ?? '';
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to extract data. Please enter manually.')),
-        );
-      }
-      setState(() {
-        _currentState = ScannerState.form;
-      });
     }
   }
 
   void _handleManualEntry() {
+    // Clear controllers and state for clean manual entry
+    _vendorController.clear();
+    _dateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    _amountController.clear();
+    _selectedCategory = null;
+    
     setState(() {
-      _currentState = ScannerState.form;
+      _extractedItems = [];
+      _receiptImage = null;
+      _showForm = true;
     });
   }
 
@@ -210,7 +266,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     }
 
     setState(() {
-      _currentState = ScannerState.loading;
+      _isScanning = true;
     });
 
     try {
@@ -221,6 +277,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
         date: _dateController.text.trim(),
         amount: amount,
         category: _selectedCategory!,
+        items: _extractedItems,
         imageFile: _receiptImage,
       );
 
@@ -235,7 +292,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _currentState = ScannerState.form;
+          _isScanning = false;
         });
         
         showDialog(
@@ -274,27 +331,47 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Add Expense / Receipt',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          'Receipt Scanner',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.accentColor),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 8),
+        Text(
+          'Let AI extract your expense details automatically.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 32),
         ElevatedButton.icon(
-          onPressed: _handleScanReceipt,
-          icon: const Icon(Icons.document_scanner),
-          label: const Text('Scan Receipt (AI)'),
+          onPressed: _takePhotoAndProcess,
+          icon: const Icon(Icons.auto_awesome),
+          label: const Text('Scan Receipt (Gemini AI)'),
           style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+            padding: const EdgeInsets.symmetric(vertical: 20),
             backgroundColor: AppTheme.accentColor,
             foregroundColor: Colors.white,
+            elevation: 8,
+            shadowColor: AppTheme.accentColor.withAlpha(100),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
         ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            const Expanded(child: Divider()),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text('OR', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+            ),
+            const Expanded(child: Divider()),
+          ],
+        ),
+        const SizedBox(height: 24),
+        TextButton.icon(
           onPressed: _handleManualEntry,
-          icon: const Icon(Icons.edit),
-          label: const Text('Enter Manually'),
-          style: OutlinedButton.styleFrom(
+          icon: const Icon(Icons.keyboard_outlined),
+          label: const Text('Enter Details Manually'),
+          style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
           ),
         ),
@@ -302,16 +379,38 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     );
   }
 
-  Widget _buildLoading() {
-    return const SizedBox(
-      height: 200,
+  Widget _buildLoading({String title = 'Gemini is Analyzing...', String subtitle = 'Extracting items and total cost'}) {
+    return Container(
+      padding: const EdgeInsets.all(40),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Processing... Please wait.'),
+            // Premium looking loader
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                const SizedBox(
+                  width: 80,
+                  height: 80,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
+                  ),
+                ),
+                Icon(Icons.auto_awesome, color: AppTheme.accentColor.withAlpha(150), size: 32),
+              ],
+            ),
+            const SizedBox(height: 32),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            ),
           ],
         ),
       ),
@@ -333,7 +432,13 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
             children: [
               Text('Expense Details', style: Theme.of(context).textTheme.titleLarge),
               if (_receiptImage != null)
-                const Icon(Icons.image, color: Colors.green)
+                GestureDetector(
+                  onTap: _pickImageForManual, // Allow changing the photo
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(_receiptImage!, width: 44, height: 44, fit: BoxFit.cover),
+                  ),
+                )
               else
                 IconButton(
                   icon: const Icon(Icons.add_a_photo),
@@ -418,6 +523,114 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
           ),
           
           const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Line Items', style: Theme.of(context).textTheme.titleMedium),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _extractedItems ??= [];
+                    _extractedItems!.add({'description': '', 'quantity': 1, 'price': 0.0});
+                  });
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Item', style: TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_extractedItems != null && _extractedItems!.isNotEmpty)
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                children: _extractedItems!.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  return Padding(
+                    key: ValueKey('${item['description']}_$index'),
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                initialValue: item['description']?.toString() ?? '',
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  labelText: 'Description',
+                                  border: UnderlineInputBorder(),
+                                ),
+                                style: const TextStyle(fontSize: 14),
+                                onChanged: (val) => _extractedItems![index]['description'] = val,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 1,
+                              child: TextFormField(
+                                initialValue: item['quantity']?.toString() ?? '1',
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  labelText: 'Qty',
+                                  border: UnderlineInputBorder(),
+                                ),
+                                style: const TextStyle(fontSize: 14),
+                                onChanged: (val) => _extractedItems![index]['quantity'] = int.tryParse(val) ?? 1,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                initialValue: item['price']?.toString() ?? '0.0',
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  labelText: 'Price',
+                                  border: UnderlineInputBorder(),
+                                ),
+                                style: const TextStyle(fontSize: 14),
+                                onChanged: (val) => _extractedItems![index]['price'] = double.tryParse(val) ?? 0.0,
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                              onPressed: () {
+                                setState(() {
+                                  _extractedItems!.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white10, style: BorderStyle.none),
+              ),
+              child: const Center(
+                child: Text('No line items added yet.', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ),
+            ),
+          
+          const SizedBox(height: 32),
           ElevatedButton(
             onPressed: _submitForm,
             style: ElevatedButton.styleFrom(
@@ -434,29 +647,45 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // Padding for keyboard
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-        left: 24,
-        right: 24,
-        top: 24,
-      ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 24),
-          child: () {
-            switch (_currentState) {
-              case ScannerState.initial:
-                return _buildInitialChoice();
-              case ScannerState.loading:
-                return _buildLoading();
-              case ScannerState.form:
-                return _buildForm();
-            }
-          }(),
+    return Stack(
+      children: [
+        Padding(
+          // Padding for keyboard
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 24,
+            right: 24,
+            top: 24,
+          ),
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _showForm ? _buildForm() : _buildInitialChoice(),
+                if (_showForm) ...[
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () => setState(() => _showForm = false),
+                    child: const Text('Cancel & Start Over'),
+                  ),
+                ],
+              ],
+            ),
+            ),
+          ),
         ),
-      ),
+        if (_isScanning)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.7),
+              child: _showForm 
+                  ? _buildLoading(title: 'Saving Expense...', subtitle: 'Uploading receipt and data')
+                  : _buildLoading(),
+            ),
+          ),
+      ],
     );
   }
 }

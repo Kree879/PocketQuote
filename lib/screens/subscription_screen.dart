@@ -112,6 +112,7 @@ class SubscriptionScreen extends StatelessWidget {
                           features: [
                             'Unlimited Quote & Invoice PDFs',
                             'Business & Jobs Management',
+                            'Gemini AI Receipt Scanning',
                             'Google Drive & OneDrive Backup',
                             'Export Catalog & History (.csv)',
                           ],

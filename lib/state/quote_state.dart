@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/material_item.dart';
 import '../models/trade_category.dart';
 import '../models/quote_model.dart';
@@ -159,13 +160,30 @@ class QuoteState extends ChangeNotifier {
     _cloudHistorySubscription?.cancel();
     _cloudHistorySubscription = _firestoreService.getQuoteHistory(userId).listen((history) async {
       cloudHistory = history;
-      // Hydrate local box with cloud history so drafts and offline support works
+      
+      // Real-time Reconciliation: Remove "Ghost Jobs" from local Hive box
+      // If a job has a firestoreId but is no longer in the cloud snapshot, it was deleted on the server.
+      final cloudIds = history.map((q) => q.id).toSet();
+      final localSyncedJobs = _box.values.where((q) => 
+        q.userId == userId && 
+        q.status != QuoteStatus.draft && 
+        q.firestoreId != null
+      ).toList();
+
+      for (var localJob in localSyncedJobs) {
+        if (!cloudIds.contains(localJob.id)) {
+          debugPrint('Reconciliation: Deleting ghost job ${localJob.id} from local cache');
+          await _box.delete(localJob.id);
+        }
+      }
+
+      // Hydrate local box with new/updated cloud history
       for (var q in history) {
         if (!_box.containsKey(q.id) || _box.get(q.id)!.lastModified.isBefore(q.lastModified)) {
           await _box.put(q.id, q);
         }
       }
-      loadLocalDrafts(); // Update dashboard drafts from hydrated box
+      loadLocalDrafts(); 
       notifyListeners();
     });
   }
@@ -742,6 +760,27 @@ class QuoteState extends ChangeNotifier {
   Future<void> deleteQuoteFromCloud(String firestoreId) async {
     if (currentUser != null) {
       await _firestoreService.deleteQuote(currentUser!.uid, firestoreId);
+      // Update local state to reflect deletion immediately if cached
+      cloudHistory.removeWhere((q) => q.firestoreId == firestoreId);
+      notifyListeners();
+    }
+  }
+
+  /// Manually clears Firestore persistence and restarts the connection.
+  /// Useful for fixing sync/permission desync issues.
+  Future<void> clearFirestoreCache() async {
+    try {
+      await FirebaseFirestore.instance.terminate();
+      await FirebaseFirestore.instance.clearPersistence();
+      await FirebaseFirestore.instance.enableNetwork();
+      
+      if (currentUser != null) {
+        _listenToCloudHistory(currentUser!.uid);
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error clearing Firestore cache: $e');
     }
   }
 
@@ -842,5 +881,23 @@ class QuoteState extends ChangeNotifier {
     currencySymbol = symbol;
     _settingsBox.put('currencySymbol', symbol);
     notifyListeners();
+  }
+
+  /// Sums the totalAmount of all receipts attached to a specific quote.
+  Stream<double> getTotalSpentForQuote(String quoteId) {
+    if (currentUser == null) return Stream.value(0.0);
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser!.uid)
+        .collection('quotes')
+        .doc(quoteId)
+        .collection('receipts')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.fold(0.0, (sum, doc) {
+        final data = doc.data();
+        return sum + (data['totalAmount'] ?? 0.0);
+      });
+    });
   }
 }

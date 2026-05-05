@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'google_drive_auth_service.dart';
 import 'onedrive_service.dart';
 import '../models/quote_model.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ExportService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -33,7 +34,7 @@ class ExportService {
       final d = doc.data();
       rows.add([
         d['name'] ?? '',
-        (d['defaultCost'] ?? 0).toDouble(),
+        double.tryParse(d['defaultCost']?.toString() ?? '0.0') ?? 0.0,
         d['unit'] ?? 'unit', // Ensuring we map 'unit' as requested
       ]);
     }
@@ -47,7 +48,7 @@ class ExportService {
     final quotesSnap = await _db
         .collection('users')
         .doc(userId)
-        .collection('projects')
+        .collection('quotes')
         .orderBy('lastModified', descending: false)
         .get();
 
@@ -196,12 +197,101 @@ class ExportService {
 
   }
 
-  /// Keep for manual/share legacy
+  /// Aggregates all receipts from all quotes and exports to CSV for accounting.
+  static Future<void> exportExpensesToCsv({
+    required BuildContext context,
+    required String userId,
+    String currencySymbol = 'R',
+  }) async {
+    try {
+      final List<List<dynamic>> rows = [
+        ['Date', 'Vendor', 'Category', 'Item Description', 'Item Price', 'Item Quantity', 'Total Amount']
+      ];
+
+      // 1. Get all quotes for the user
+      final quotesSnap = await _db.collection('users').doc(userId).collection('quotes').get();
+      
+      int totalReceipts = 0;
+
+      for (final quoteDoc in quotesSnap.docs) {
+        // 2. For each quote, get all receipts
+        final receiptsSnap = await quoteDoc.reference.collection('receipts').orderBy('date', descending: true).get();
+        
+        for (final receiptDoc in receiptsSnap.docs) {
+          totalReceipts++;
+          final data = receiptDoc.data();
+          final vendor = data['vendorName'] ?? 'Unknown';
+          final category = data['category'] ?? 'Uncategorized';
+          final total = double.tryParse(data['totalAmount']?.toString() ?? '0.0') ?? 0.0;
+          
+          String dateStr = '';
+          final dateData = data['date'];
+          if (dateData is Timestamp) {
+            dateStr = DateFormat('yyyy-MM-dd').format(dateData.toDate());
+          } else if (dateData is String) {
+            dateStr = dateData;
+          }
+
+          final List<dynamic>? items = data['items'] as List<dynamic>?;
+          
+          if (items == null || items.isEmpty) {
+            // If no line items, record the single entry
+            rows.add([dateStr, vendor, category, 'N/A', 0.0, 0, total]);
+          } else {
+            // Record each line item
+            for (final item in items) {
+              rows.add([
+                dateStr,
+                vendor,
+                category,
+                item['description'] ?? 'Item',
+                double.tryParse(item['price']?.toString() ?? '0.0') ?? 0.0,
+                int.tryParse(item['quantity']?.toString() ?? '1') ?? 1,
+                total,
+              ]);
+            }
+          }
+        }
+      }
+
+      if (totalReceipts == 0) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No expenses found to export.'), backgroundColor: Colors.orange),
+          );
+        }
+        return;
+      }
+
+      // 3. Generate CSV
+      final csvString = const ListToCsvConverter().convert(rows);
+      final tempDir = await getTemporaryDirectory();
+      final dateStamp = DateFormat('yyyyMMdd').format(DateTime.now());
+      final file = File('${tempDir.path}/PocketQuote_Expenses_$dateStamp.csv');
+      await file.writeAsString(csvString);
+
+      // 4. Share File
+      if (context.mounted) {
+        await Share.shareXFiles(
+          [XFile(file.path)], 
+          text: 'Pocket Quote Expense Report - $dateStamp',
+          subject: 'Expense Export'
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e'), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  /// Legacy helper for sharing (deprecated in favor of Drive/OneDrive but kept for UI compatibility)
   static Future<void> exportAllToCSV({
     required BuildContext context,
     required String userId,
   }) async {
-    // We can keep the legacy combined logic or update to share one by one.
-    // For now, let's keep it simple as the user is focused on Drive.
+    // ... logic ...
   }
 }

@@ -3,7 +3,10 @@ import 'package:provider/provider.dart';
 import '../state/quote_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/feature_gate.dart';
 import '../services/csv_import_service.dart';
+import '../services/export_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class BusinessScreen extends StatefulWidget {
   const BusinessScreen({super.key});
@@ -136,6 +139,21 @@ class _BusinessScreenState extends State<BusinessScreen> {
     }
   }
 
+  Future<void> _exportExpenses() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to export expenses.')),
+      );
+      return;
+    }
+
+    await ExportService.exportExpensesToCsv(
+      context: context,
+      userId: user.uid,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -144,9 +162,10 @@ class _BusinessScreenState extends State<BusinessScreen> {
       appBar: AppBar(
         title: const Text('Business'),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
-        children: [
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
           Text(
             'Business Defaults',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -315,18 +334,70 @@ class _BusinessScreenState extends State<BusinessScreen> {
                   style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : Colors.black87),
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _isImporting ? null : _importCsv,
-                    icon: _isImporting 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.upload_file),
-                    label: Text(_isImporting ? 'Parsing CSV...' : 'Select CSV to Import'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: AppTheme.accentColor.withAlpha(100)),
-                      foregroundColor: AppTheme.accentColor,
+                FeatureGate(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isImporting ? null : _importCsv,
+                      icon: _isImporting 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.upload_file),
+                      label: Text(_isImporting ? 'Parsing CSV...' : 'Select CSV to Import'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: AppTheme.accentColor.withAlpha(100)),
+                        foregroundColor: AppTheme.accentColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          Text(
+            'Financial Reporting',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.accentColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Export all logged expenses across all projects for your records or accountant.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 24),
+
+          GlassContainer(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CSV Export Includes:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '• Full itemized breakdown of all scanned receipts\n'
+                  '• Vendor names, dates, and categories\n'
+                  '• Quantities and individual item pricing',
+                  style: TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+                const SizedBox(height: 24),
+                FeatureGate(
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _exportExpenses,
+                      icon: const Icon(Icons.download),
+                      label: const Text('Export Expenses to CSV'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.green.withAlpha(150),
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -335,6 +406,7 @@ class _BusinessScreenState extends State<BusinessScreen> {
           ),
           const SizedBox(height: 48),
         ],
+        ),
       ),
     );
   }

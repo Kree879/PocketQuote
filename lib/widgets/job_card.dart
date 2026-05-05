@@ -10,6 +10,10 @@ import '../screens/costing_screen.dart';
 import '../services/pdf_service.dart';
 import 'receipt_scanner_sheet.dart';
 import 'expense_list.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import '../services/receipt_scanner_service.dart';
+import 'feature_gate.dart';
 
 class JobCard extends StatefulWidget {
   final QuoteModel quote;
@@ -198,40 +202,69 @@ class _JobCardState extends State<JobCard> {
                           const SizedBox(height: 24),
 
                           // Costing Summary
-                          _buildCostRow('Estimated Cost', estimatedCost),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color:
-                                  Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white.withAlpha(10)
-                                  : Colors.black.withAlpha(10),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color:
-                                    Theme.of(context).brightness ==
-                                        Brightness.dark
-                                    ? Colors.white.withAlpha(20)
-                                    : Colors.black.withAlpha(20),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Final Price',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                                Text(
-                                  '${context.read<QuoteState>().currencySymbol}${finalPrice.toStringAsFixed(2)}',
-                                  style: Theme.of(context).textTheme.titleLarge
-                                      ?.copyWith(fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
+                          StreamBuilder<double>(
+                            stream: context.read<QuoteState>().getTotalSpentForQuote(q.firestoreId ?? q.id),
+                            builder: (context, snapshot) {
+                              final totalSpent = snapshot.data ?? 0.0;
+                              final isOverBudget = totalSpent > q.totalCostCached;
+                              
+                              return Column(
+                                children: [
+                                  _buildCostRow('Estimated Cost', estimatedCost),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white.withAlpha(10)
+                                          : Colors.black.withAlpha(10),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isOverBudget ? Colors.redAccent.withAlpha(100) : (Theme.of(context).brightness == Brightness.dark
+                                            ? Colors.white.withAlpha(20)
+                                            : Colors.black.withAlpha(20)),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Quote Amount',
+                                              style: Theme.of(context).textTheme.bodyMedium,
+                                            ),
+                                            Text(
+                                              '${context.read<QuoteState>().currencySymbol}${q.totalCostCached.toStringAsFixed(2)}',
+                                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Total Spent',
+                                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                color: isOverBudget ? Colors.redAccent : null,
+                                              ),
+                                            ),
+                                            Text(
+                                              '${context.read<QuoteState>().currencySymbol}${totalSpent.toStringAsFixed(2)}',
+                                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: isOverBudget ? Colors.redAccent : Colors.greenAccent,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
 
                           const SizedBox(height: 24),
@@ -325,41 +358,88 @@ class _JobCardState extends State<JobCard> {
                           ),
                           const SizedBox(height: 12),
                         ],
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accentColor,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          icon: const Icon(Icons.receipt_long),
-                          label: const Text(
-                            'Add Expense / Receipt',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context); // Close details modal
-                            final quoteId = q.firestoreId ?? q.id;
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).scaffoldBackgroundColor,
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                ),
-                                child: SafeArea(
-                                  child: ReceiptScannerSheet(quoteId: quoteId),
-                                ),
+                        FeatureGate(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            );
-                          },
+                            ),
+                            icon: const Icon(Icons.auto_awesome),
+                            label: const Text(
+                              'Scan Receipt (Gemini AI)',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () {
+                              final quoteId = q.firestoreId ?? q.id;
+                              Navigator.pop(context); // Close details modal
+                              
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).scaffoldBackgroundColor,
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  child: SafeArea(
+                                    child: ReceiptScannerSheet(
+                                      quoteId: quoteId,
+                                      autoScan: true,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FeatureGate(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: const Icon(Icons.keyboard_outlined),
+                            label: const Text(
+                              'Enter Details Manually',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onPressed: () {
+                              final quoteId = q.firestoreId ?? q.id;
+                              Navigator.pop(context); // Close details modal
+                              
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => Container(
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).scaffoldBackgroundColor,
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  child: SafeArea(
+                                    child: ReceiptScannerSheet(
+                                      quoteId: quoteId,
+                                      manualMode: true,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
@@ -618,17 +698,49 @@ class _JobCardState extends State<JobCard> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    _buildTag(
-                      Icons.person_outline,
-                      widget.quote.clientName.isEmpty
-                          ? 'Unknown'
-                          : widget.quote.clientName,
-                    ),
+                    _buildTag(Icons.person_outline, widget.quote.clientName.isEmpty ? 'Unknown' : widget.quote.clientName),
                     _buildTag(catInfo.icon, catInfo.title),
                   ],
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                
+                // Spent vs Quote comparison in the card itself
+                StreamBuilder<double>(
+                  stream: context.read<QuoteState>().getTotalSpentForQuote(widget.quote.firestoreId ?? widget.quote.id),
+                  builder: (context, snapshot) {
+                    final totalSpent = snapshot.data ?? 0.0;
+                    final isOverBudget = totalSpent > widget.quote.totalCostCached;
+                    
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).brightness == Brightness.dark ? Colors.black26 : Colors.black.withAlpha(8),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.pie_chart_outline, size: 16, color: isOverBudget ? Colors.redAccent : Colors.greenAccent),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Spent: ${context.read<QuoteState>().currencySymbol}${totalSpent.toStringAsFixed(2)} / ${context.read<QuoteState>().currencySymbol}${widget.quote.totalCostCached.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: isOverBudget ? Colors.redAccent : null,
+                              ),
+                            ),
+                          ),
+                          if (isOverBudget)
+                            const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.redAccent),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 12),
 
                 // Action Buttons Row
                 SingleChildScrollView(
@@ -839,42 +951,49 @@ class _JobCardState extends State<JobCard> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.white10
+            : Colors.black.withAlpha(12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withAlpha(10)
-              : Colors.black.withAlpha(10), // Light glass effect
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withAlpha(20)
-                : Colors.black.withAlpha(20),
+              ? Colors.white.withAlpha(20)
+              : Colors.black.withAlpha(20),
+        ),
+      ),
+      child: TextButton.icon(
+        icon: Icon(icon, size: 16, color: AppTheme.accentColor),
+        label: Text(
+          label,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: Theme.of(context).textTheme.bodyMedium?.color,
+        onPressed: onTap,
+      ),
+    );
+  }
+
+  Widget _buildSourceOption(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style:
-                  Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ) ??
-                  const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
+            child: Icon(icon, color: AppTheme.accentColor, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        ],
       ),
     );
   }

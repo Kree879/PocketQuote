@@ -37,8 +37,8 @@ android {
         applicationId = "com.kree8designs.pocketquote"
         minSdk = 24
         targetSdk = 35
-        versionCode = 11
-        versionName = "11.0.0"
+        versionCode = 15
+        versionName = "15.0.0"
     }
 
     signingConfigs {
@@ -66,4 +66,5 @@ flutter {
 
 dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.activity:activity-ktx:1.9.0")
 }

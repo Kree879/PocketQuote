@@ -34,6 +34,7 @@ migrate_working_dir/
 *.log
 .env
 .env.*
+lib/config/api_keys.dart
 
 # ==============================================================================
 # Flutter / Dart / Pub

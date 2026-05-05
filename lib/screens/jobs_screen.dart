@@ -154,7 +154,19 @@ class _JobsScreenState extends State<JobsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Job Manager'),
+        title: GestureDetector(
+          onLongPress: () async {
+            // Hidden Debug Function: Clear Firestore Persistence
+            final state = context.read<QuoteState>();
+            await state.clearFirestoreCache();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Firestore Cache Cleared & Resynced')),
+              );
+            }
+          },
+          child: const Text('Job Manager'),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -171,9 +183,10 @@ class _JobsScreenState extends State<JobsScreen> {
 
           return Stack(
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+              SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Text('$countAll jobs total', style: Theme.of(context).textTheme.bodyMedium),
@@ -397,7 +410,8 @@ class _JobsScreenState extends State<JobsScreen> {
                       ),
               ),
             ],
-          ),
+                ),
+              ),
               if (_isBackingUp)
                 Container(
                   color: Colors.black54,

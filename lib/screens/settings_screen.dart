@@ -193,9 +193,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16.0),
-            children: [
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(16.0),
+              children: [
               Text(
                 'App Appearance',
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -631,6 +632,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+      ),
         
         // Syncing Overlay
         if (state.isSyncing)

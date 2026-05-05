@@ -36,7 +36,7 @@ class ExpenseList extends StatelessWidget {
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('projects')
+          .collection('quotes')
           .doc(quoteId)
           .collection('receipts')
           .doc(docId)
@@ -103,7 +103,7 @@ class ExpenseList extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
-          .collection('projects')
+          .collection('quotes')
           .doc(quoteId)
           .collection('receipts')
           .orderBy('date', descending: true)
@@ -195,9 +195,20 @@ class ExpenseList extends StatelessWidget {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: Colors.white10,
-                            image: DecorationImage(
-                              image: NetworkImage(imageUrl),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              imageUrl,
                               fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                debugPrint('ExpenseList: Image load error for $imageUrl: $error');
+                                return const Icon(Icons.broken_image, color: Colors.redAccent, size: 20);
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)));
+                              },
                             ),
                           ),
                         ),
@@ -248,6 +259,36 @@ class ExpenseList extends StatelessWidget {
                               ),
                             ],
                           ),
+                          if (data['items'] != null && (data['items'] as List).isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            const Divider(height: 1, color: Colors.white10),
+                            const SizedBox(height: 4),
+                            ...(data['items'] as List).map((item) {
+                              final desc = item['description'] ?? 'Item';
+                              final price = item['price'] ?? 0.0;
+                              final qty = item['quantity'] ?? 1;
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 2),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '$qty x $desc',
+                                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      '$currencySymbol${price.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ],
                         ],
                       ),
                     ),
