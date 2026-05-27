@@ -24,8 +24,8 @@ class AuthService {
     }
   }
 
-  // Auth stream
-  Stream<User?> get user => _auth.authStateChanges();
+  // Auth stream (using userChanges so it fires when user.reload() is called)
+  Stream<User?> get user => _auth.userChanges();
 
   // Sign up with Email/Password
   Future<User?> signUp(String email, String password) async {
@@ -34,12 +34,28 @@ class AuthService {
         email: email,
         password: password,
       );
+      
+      // Send verification email immediately
+      if (result.user != null && !result.user!.emailVerified) {
+        await result.user!.sendEmailVerification();
+      }
+      
       return result.user;
     } on FirebaseAuthException catch (e) {
       debugPrint('Sign up error [${e.code}]: ${e.message}');
       rethrow;
     } catch (e) {
       debugPrint('Sign up error: $e');
+      rethrow;
+    }
+  }
+
+  // Resend verification email
+  Future<void> resendVerificationEmail(User user) async {
+    try {
+      await user.sendEmailVerification();
+    } catch (e) {
+      debugPrint('Resend verification error: $e');
       rethrow;
     }
   }
@@ -111,11 +127,21 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
+    final user = _auth.currentUser;
+    final isGoogleUser = user?.providerData.any((info) => info.providerId == 'google.com') ?? false;
+
+    if (isGoogleUser) {
+      try {
+        await _googleSignIn.signOut();
+      } catch (e) {
+        debugPrint('Google Sign out error: $e');
+      }
+    }
+    
     try {
-      await _googleSignIn.signOut();
       await _auth.signOut();
     } catch (e) {
-      debugPrint('Sign out error: $e');
+      debugPrint('Firebase Sign out error: $e');
     }
   }
 }

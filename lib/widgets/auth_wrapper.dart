@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../screens/main_layout.dart';
 import '../screens/login_screen.dart';
+import '../screens/verify_email_screen.dart';
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
@@ -20,6 +21,8 @@ class AuthWrapper extends StatelessWidget {
           
           if (user == null) {
             return const LoginScreen();
+          } else if (!user.emailVerified) {
+            return const VerifyEmailScreen();
           } else {
             return const MainLayout();
           }
