@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class SubscriptionProvider extends ChangeNotifier {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
@@ -12,13 +14,49 @@ class SubscriptionProvider extends ChangeNotifier {
   bool _isLoading = false;
   int _quoteCount = 0;
   List<ProductDetails> _products = [];
+  
+  StreamSubscription<DocumentSnapshot>? _firestoreSub;
+  StreamSubscription<User?>? _authSub;
 
   // Constants
-  static const String _kGenerateQuoteCountKey = 'generated_quote_count';
   static const String _kBusinessPlanId = 'business_plan';
 
   SubscriptionProvider() {
     _initialize();
+    _listenToAuthState();
+  }
+
+  void _listenToAuthState() {
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      _firestoreSub?.cancel();
+      if (user != null) {
+        _listenToFirestore(user.uid);
+      } else {
+        _isSubscribed = false;
+        _quoteCount = 0;
+        notifyListeners();
+      }
+    });
+  }
+
+  void _listenToFirestore(String uid) {
+    _firestoreSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('subscription')
+        .doc('status')
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data();
+        _isSubscribed = data?['isSubscribed'] ?? false;
+        _quoteCount = data?['freeQuotesUsed'] ?? 0;
+      } else {
+        _isSubscribed = false;
+        _quoteCount = 0;
+      }
+      notifyListeners();
+    });
   }
 
   bool get isSubscribed => _isSubscribed;
@@ -33,10 +71,6 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> _initialize() async {
     _isLoading = true;
     notifyListeners();
-
-    // Load Free Tier Counter
-    final prefs = await SharedPreferences.getInstance();
-    _quoteCount = prefs.getInt(_kGenerateQuoteCountKey) ?? 0;
 
     // Listen to purchases
     final purchaseUpdated = _inAppPurchase.purchaseStream;
@@ -68,10 +102,12 @@ class SubscriptionProvider extends ChangeNotifier {
   Future<void> incrementQuoteCount() async {
     if (_isSubscribed) return; // Unnecessary to track if subscribed
 
-    final prefs = await SharedPreferences.getInstance();
-    _quoteCount += 1;
-    await prefs.setInt(_kGenerateQuoteCountKey, _quoteCount);
-    notifyListeners();
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable('incrementQuoteCount');
+      await callable.call();
+    } catch (e) {
+      debugPrint('Failed to increment quote count: $e');
+    }
   }
 
   Future<void> purchaseBusinessPlan() async {
@@ -84,7 +120,9 @@ class SubscriptionProvider extends ChangeNotifier {
 
   Future<void> restorePurchases() async {
     _isLoading = true;
-    _isSubscribed = false; // Reset before querying the active list
+    // Do NOT reset _isSubscribed here — _listenToPurchaseUpdated() is the sole
+    // authority on subscription state. Resetting prematurely creates a race
+    // condition where a subscribed user briefly appears as a free-tier user.
     notifyListeners();
     await _inAppPurchase.restorePurchases().whenComplete(() {
       _isLoading = false;
@@ -110,7 +148,19 @@ class SubscriptionProvider extends ChangeNotifier {
                    purchaseDetails.status == PurchaseStatus.restored) {
           
           if (purchaseDetails.productID == _kBusinessPlanId) {
-            _isSubscribed = true;
+            _isLoading = true;
+            notifyListeners();
+            try {
+              final callable = FirebaseFunctions.instance.httpsCallable('verifyPurchase');
+              await callable.call({
+                'purchaseToken': purchaseDetails.verificationData.serverVerificationData,
+                'productId': purchaseDetails.productID,
+                'source': purchaseDetails.verificationData.source,
+              });
+              // Firestore listener will update _isSubscribed automatically
+            } catch (e) {
+              debugPrint('Failed to verify purchase: $e');
+            }
           }
           _isLoading = false;
           
@@ -126,6 +176,8 @@ class SubscriptionProvider extends ChangeNotifier {
   @override
   void dispose() {
     _subscription.cancel();
+    _firestoreSub?.cancel();
+    _authSub?.cancel();
     super.dispose();
   }
 }

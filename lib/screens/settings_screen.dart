@@ -39,9 +39,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
   Future<void> _handleSyncNow(BuildContext context, QuoteState state) async {
-
+    final subProvider = context.read<SubscriptionProvider>();
     try {
-      await state.syncAllLocalDataToCloud();
+      await state.syncAllLocalDataToCloud(subProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

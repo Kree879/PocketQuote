@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -8,6 +9,7 @@ import '../models/quote_model.dart';
 import '../widgets/job_card.dart';
 import '../theme/app_theme.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/feature_gate.dart';
 import '../services/pdf_service.dart';
 import '../services/google_drive_auth_service.dart';
 import '../services/onedrive_service.dart';
@@ -155,16 +157,18 @@ class _JobsScreenState extends State<JobsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: GestureDetector(
-          onLongPress: () async {
-            // Hidden Debug Function: Clear Firestore Persistence
-            final state = context.read<QuoteState>();
-            await state.clearFirestoreCache();
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Firestore Cache Cleared & Resynced')),
-              );
-            }
-          },
+          // Debug-only: Clear Firestore Persistence. Disabled in release builds.
+          onLongPress: kDebugMode
+              ? () async {
+                  final state = context.read<QuoteState>();
+                  await state.clearFirestoreCache();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('[DEBUG] Firestore Cache Cleared & Resynced')),
+                    );
+                  }
+                }
+              : null,
           child: const Text('Job Manager'),
         ),
         backgroundColor: Colors.transparent,
@@ -229,15 +233,17 @@ class _JobsScreenState extends State<JobsScreen> {
                     Row(
                       children: [
                         if (_selectedIds.isNotEmpty) ...[
-                          IconButton(
-                            onPressed: () => _handleBackupSelected(history, context.read<QuoteState>()),
-                            icon: Icon(Icons.cloud_upload_outlined, color: AppTheme.accentColor, size: 20),
-                            style: IconButton.styleFrom(
-                              backgroundColor: AppTheme.accentColor.withAlpha(20),
-                              padding: const EdgeInsets.all(8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          FeatureGate(
+                            child: IconButton(
+                              onPressed: () => _handleBackupSelected(history, context.read<QuoteState>()),
+                              icon: Icon(Icons.cloud_upload_outlined, color: AppTheme.accentColor, size: 20),
+                              style: IconButton.styleFrom(
+                                backgroundColor: AppTheme.accentColor.withAlpha(20),
+                                padding: const EdgeInsets.all(8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              tooltip: 'Backup',
                             ),
-                            tooltip: 'Backup',
                           ),
                           const SizedBox(width: 8),
                           IconButton(

@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Make sure all users can only read and write their own data
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Explicitly lock down the subscription collection so users cannot grant
+    // themselves a free subscription. This can only be written by Cloud Functions.
+    match /users/{userId}/subscription/{doc} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Only writable via Admin SDK
+    }
+  }
+}

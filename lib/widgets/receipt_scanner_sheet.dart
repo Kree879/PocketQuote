@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../services/receipt_scanner_service.dart';
+import '../state/subscription_provider.dart';
+import '../widgets/feature_gate.dart';
 import '../widgets/glass_container.dart';
 import '../theme/app_theme.dart';
 
@@ -117,6 +120,13 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
   }
 
   Future<void> _takePhotoAndProcess() async {
+    // Defence-in-depth: guard AI scanning even if call site omits a FeatureGate.
+    final sub = context.read<SubscriptionProvider>();
+    if (!sub.isSubscribed) {
+      FeatureGate.showUpgradePath(context);
+      return;
+    }
+
     final source = await _showImageSourceDialog();
     if (source == null) return;
 

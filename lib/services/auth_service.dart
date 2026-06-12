@@ -5,9 +5,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
-//   final GoogleSignIn _googleSignIn = GoogleSignIn(
-//     serverClientId: '597608208696-3dad01ns1r4l6k1c0b86n43kplhn35l3.apps.googleusercontent.com',
-//   );
 
   AuthService() {
     // Ensure the singleton is initialized

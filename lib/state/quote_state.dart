@@ -17,6 +17,7 @@ import '../services/firestore_service.dart';
 import '../models/catalog_item.dart';
 import '../services/google_drive_auth_service.dart';
 import '../services/onedrive_service.dart';
+import '../state/subscription_provider.dart';
 
 class QuoteState extends ChangeNotifier {
   Timer? _debounceTimer;
@@ -811,10 +812,17 @@ class QuoteState extends ChangeNotifier {
     return result;
   }
 
-  /// Atomic batch sync of all local data to Firestore
-  Future<void> syncAllLocalDataToCloud() async {
+  /// Atomic batch sync of all local data to Firestore.
+  /// Requires a [SubscriptionProvider] to enforce that only Business plan
+  /// users can trigger a manual full sync.
+  Future<void> syncAllLocalDataToCloud(SubscriptionProvider subscription) async {
     if (currentUser == null) return;
-    
+
+    // Defence-in-depth: enforce subscription in the logic layer, not just the UI.
+    if (!subscription.isSubscribed) {
+      throw Exception('Business plan required to sync all data to the cloud.');
+    }
+
     isSyncing = true;
     notifyListeners();
 

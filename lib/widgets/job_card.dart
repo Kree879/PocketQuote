@@ -311,50 +311,52 @@ class _JobCardState extends State<JobCard> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         if (q.status == QuoteStatus.approved) ...[
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
-                              foregroundColor: Theme.of(
-                                context,
-                              ).colorScheme.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          FeatureGate(
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.primary,
+                                foregroundColor: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
-                            ),
-                            icon: const Icon(Icons.receipt_long),
-                            label: const Text(
-                              'Create Invoice',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+                              icon: const Icon(Icons.receipt_long),
+                              label: const Text(
+                                'Create Invoice',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                            onPressed: () async {
-                              Navigator.pop(context); // Close modal
-                              final globalState = context.read<QuoteState>();
-                              await PdfService.generateAndSharePDF(
-                                context: context,
-                                quote: q,
-                                globalState: globalState,
-                                isInvoice: true,
-                              );
-                              await globalState.updateQuoteStatus(
-                                q,
-                                QuoteStatus.invoiced,
-                              );
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Invoice generated and status updated!',
-                                    ),
-                                  ),
+                              onPressed: () async {
+                                Navigator.pop(context); // Close modal
+                                final globalState = context.read<QuoteState>();
+                                await PdfService.generateAndSharePDF(
+                                  context: context,
+                                  quote: q,
+                                  globalState: globalState,
+                                  isInvoice: true,
                                 );
-                              }
-                            },
+                                await globalState.updateQuoteStatus(
+                                  q,
+                                  QuoteStatus.invoiced,
+                                );
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Invoice generated and status updated!',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
                           ),
                           const SizedBox(height: 12),
                         ],
