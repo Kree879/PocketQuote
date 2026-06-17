@@ -1,31 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../services/receipt_scanner_service.dart';
-import '../state/subscription_provider.dart';
-import '../widgets/feature_gate.dart';
 import '../widgets/glass_container.dart';
 import '../theme/app_theme.dart';
 
-
-
 class ReceiptScannerSheet extends StatefulWidget {
   final String quoteId;
-  final Map<String, dynamic>? initialData;
   final File? initialImage;
-  final bool autoScan;
-  final bool manualMode;
 
   const ReceiptScannerSheet({
     super.key, 
     required this.quoteId,
-    this.initialData,
     this.initialImage,
-    this.autoScan = false,
-    this.manualMode = false,
   });
 
   @override
@@ -33,7 +22,6 @@ class ReceiptScannerSheet extends StatefulWidget {
 }
 
 class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
-  bool _showForm = false;
   bool _isScanning = false;
   
   final _formKey = GlobalKey<FormState>();
@@ -56,27 +44,8 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     _dateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
     _loadRecentCategories();
 
-    if (widget.initialData != null || widget.initialImage != null) {
+    if (widget.initialImage != null) {
       _receiptImage = widget.initialImage;
-      if (widget.initialData != null) {
-        final data = widget.initialData!;
-        // Harden Field Mapping: Handle various potential keys from AI results
-        _vendorController.text = (data['merchantName'] ?? data['vendorName'] ?? data['vendor'] ?? data['merchant'] ?? '')?.toString() ?? '';
-        _dateController.text = data['date']?.toString() ?? _dateController.text;
-        _amountController.text = (data['totalAmount'] ?? data['amount'] ?? data['total'] ?? '')?.toString() ?? '';
-        _extractedItems = data['items'] as List<dynamic>?;
-      }
-      _showForm = true;
-    }
-
-    if (widget.autoScan) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _takePhotoAndProcess();
-      });
-    } else if (widget.manualMode) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleManualEntry();
-      });
     }
   }
 
@@ -119,83 +88,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     });
   }
 
-  Future<void> _takePhotoAndProcess() async {
-    // Defence-in-depth: guard AI scanning even if call site omits a FeatureGate.
-    final sub = context.read<SubscriptionProvider>();
-    if (!sub.isSubscribed) {
-      FeatureGate.showUpgradePath(context);
-      return;
-    }
 
-    final source = await _showImageSourceDialog();
-    if (source == null) return;
-
-    final service = ReceiptScannerService.instance;
-    final image = await service.pickReceiptImage(source: source);
-    
-    if (image == null) return; // User canceled
-
-    setState(() {
-      _receiptImage = image;
-      _isScanning = true;
-    });
-
-    try {
-      final data = await service.extractReceiptData(image);
-      
-      if (mounted) {
-        if (data != null) {
-          // Harden Field Mapping: Priority mapping for AI extracted fields
-          _vendorController.text = (data['merchantName'] ?? data['vendorName'] ?? data['vendor'] ?? data['merchant'] ?? '')?.toString() ?? '';
-          _dateController.text = data['date']?.toString() ?? _dateController.text;
-          _amountController.text = (data['totalAmount'] ?? data['amount'] ?? data['total'] ?? '')?.toString() ?? '';
-          _extractedItems = data['items'] as List<dynamic>?;
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('AI returned empty data. Please enter details manually.'),
-              backgroundColor: Colors.orangeAccent,
-            ),
-          );
-        }
-        setState(() {
-          _isScanning = false;
-          _showForm = true;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-          _showForm = true; // Transition to form for manual entry anyway
-        });
-        
-        // Visible Error Feedback: Inform user why AI failed
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('AI Extraction Error: ${e.toString().replaceAll('Exception: ', '')}'),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(label: 'MANUAL', textColor: Colors.white, onPressed: () {}),
-          ),
-        );
-      }
-    }
-  }
-
-  void _handleManualEntry() {
-    // Clear controllers and state for clean manual entry
-    _vendorController.clear();
-    _dateController.text = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    _amountController.clear();
-    _selectedCategory = null;
-    
-    setState(() {
-      _extractedItems = [];
-      _receiptImage = null;
-      _showForm = true;
-    });
-  }
 
   Future<void> _pickImageForManual() async {
     final source = await _showImageSourceDialog();
@@ -335,61 +228,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
     }
   }
 
-  Widget _buildInitialChoice() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Receipt Scanner',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: AppTheme.accentColor),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Let AI extract your expense details automatically.',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton.icon(
-          onPressed: _takePhotoAndProcess,
-          icon: const Icon(Icons.auto_awesome),
-          label: const Text('Scan Receipt (Gemini AI)'),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            backgroundColor: AppTheme.accentColor,
-            foregroundColor: Colors.white,
-            elevation: 8,
-            shadowColor: AppTheme.accentColor.withAlpha(100),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            const Expanded(child: Divider()),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text('OR', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
-            ),
-            const Expanded(child: Divider()),
-          ],
-        ),
-        const SizedBox(height: 24),
-        TextButton.icon(
-          onPressed: _handleManualEntry,
-          icon: const Icon(Icons.keyboard_outlined),
-          label: const Text('Enter Details Manually'),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoading({String title = 'Gemini is Analyzing...', String subtitle = 'Extracting items and total cost'}) {
+  Widget _buildLoading({String title = 'Saving...', String subtitle = 'Uploading receipt and data'}) {
     return Container(
       padding: const EdgeInsets.all(40),
       child: Center(
@@ -408,7 +247,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
                   ),
                 ),
-                Icon(Icons.auto_awesome, color: AppTheme.accentColor.withAlpha(150), size: 32),
+                Icon(Icons.cloud_upload, color: AppTheme.accentColor.withAlpha(150), size: 32),
               ],
             ),
             const SizedBox(height: 32),
@@ -673,14 +512,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _showForm ? _buildForm() : _buildInitialChoice(),
-                if (_showForm) ...[
-                  const SizedBox(height: 16),
-                  TextButton(
-                    onPressed: () => setState(() => _showForm = false),
-                    child: const Text('Cancel & Start Over'),
-                  ),
-                ],
+                _buildForm(),
               ],
             ),
             ),
@@ -690,9 +522,7 @@ class _ReceiptScannerSheetState extends State<ReceiptScannerSheet> {
           Positioned.fill(
             child: Container(
               color: Colors.black.withOpacity(0.7),
-              child: _showForm 
-                  ? _buildLoading(title: 'Saving Expense...', subtitle: 'Uploading receipt and data')
-                  : _buildLoading(),
+              child: _buildLoading(title: 'Saving Expense...', subtitle: 'Uploading receipt and data'),
             ),
           ),
       ],

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
@@ -10,9 +9,6 @@ import '../screens/costing_screen.dart';
 import '../services/pdf_service.dart';
 import 'receipt_scanner_sheet.dart';
 import 'expense_list.dart';
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
-import '../services/receipt_scanner_service.dart';
 import 'feature_gate.dart';
 
 class JobCard extends StatefulWidget {
@@ -81,7 +77,7 @@ class _JobCardState extends State<JobCard> {
         final totalMaterialCost = baseMaterialCost + materialMarkupCost;
         final estimatedCost =
             callOutCost + laborCost + travelCost + baseMaterialCost;
-        final finalPrice = q.totalCostCached; // This includes markup
+
 
         return FractionallySizedBox(
           heightFactor: 0.9,
@@ -361,49 +357,6 @@ class _JobCardState extends State<JobCard> {
                           const SizedBox(height: 12),
                         ],
                         FeatureGate(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: const Icon(Icons.auto_awesome),
-                            label: const Text(
-                              'Scan Receipt (Gemini AI)',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            onPressed: () {
-                              final quoteId = q.firestoreId ?? q.id;
-                              Navigator.pop(context); // Close details modal
-                              
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (context) => Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).scaffoldBackgroundColor,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                  ),
-                                  child: SafeArea(
-                                    child: ReceiptScannerSheet(
-                                      quoteId: quoteId,
-                                      autoScan: true,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        FeatureGate(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -435,7 +388,6 @@ class _JobCardState extends State<JobCard> {
                                   child: SafeArea(
                                     child: ReceiptScannerSheet(
                                       quoteId: quoteId,
-                                      manualMode: true,
                                     ),
                                   ),
                                 ),
@@ -980,23 +932,4 @@ class _JobCardState extends State<JobCard> {
     );
   }
 
-  Widget _buildSourceOption(BuildContext context, {required IconData icon, required String label, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.black12,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppTheme.accentColor, size: 32),
-          ),
-          const SizedBox(height: 8),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        ],
-      ),
-    );
-  }
 }

@@ -60,7 +60,6 @@ dependencies:
   in_app_purchase: ^3.2.3
   aad_oauth: ^1.0.1
   file_picker: ^11.0.2
-  google_generative_ai: ^0.4.7
   firebase_storage: ^13.3.0
   cloud_functions: ^6.2.0
 
